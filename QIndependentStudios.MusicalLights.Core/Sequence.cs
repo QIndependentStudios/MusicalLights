@@ -27,6 +27,7 @@ namespace QIndependentStudios.MusicalLights.Core
 
         public string ToJson()
         {
+            _keyFrames = _keyFrames.OrderBy(f => f.Time).ToList();
             return JsonConvert.SerializeObject(this);
         }
 
@@ -39,7 +40,6 @@ namespace QIndependentStudios.MusicalLights.Core
                 throw new ArgumentException($"A KeyFrame already exists with time {keyFrame.Time}.", nameof(keyFrame));
 
             _keyFrames.Add(keyFrame);
-            _keyFrames = _keyFrames.OrderBy(f => f.Time).ToList();
         }
 
         public void AddKeyFrames(IEnumerable<KeyFrame> keyFrames)
@@ -49,13 +49,8 @@ namespace QIndependentStudios.MusicalLights.Core
 
             foreach (var keyFrame in keyFrames)
             {
-                if (_keyFrames.Any(f => f.Time == keyFrame.Time))
-                    throw new ArgumentException($"A KeyFrame already exists with time {keyFrame.Time}.", nameof(keyFrame));
-
-                _keyFrames.Add(keyFrame);
+                AddKeyFrame(keyFrame);
             }
-
-            _keyFrames = _keyFrames.OrderBy(f => f.Time).ToList();
         }
 
         public void RemoveKeyFrame(KeyFrame keyFrame)
