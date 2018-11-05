@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2050
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QIndependentStudios.MusicalLights.Designer", "QIndependentStudios.MusicalLights.Designer\QIndependentStudios.MusicalLights.Designer.csproj", "{D8E11CCF-4DA9-44A8-8672-199836F3C289}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|ARM = Release|ARM
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Debug|ARM.ActiveCfg = Debug|ARM
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Debug|ARM.Build.0 = Debug|ARM
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Debug|ARM.Deploy.0 = Debug|ARM
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Debug|x64.ActiveCfg = Debug|x64
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Debug|x64.Build.0 = Debug|x64
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Debug|x64.Deploy.0 = Debug|x64
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Debug|x86.ActiveCfg = Debug|x86
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Debug|x86.Build.0 = Debug|x86
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Debug|x86.Deploy.0 = Debug|x86
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Release|ARM.ActiveCfg = Release|ARM
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Release|ARM.Build.0 = Release|ARM
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Release|ARM.Deploy.0 = Release|ARM
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Release|x64.ActiveCfg = Release|x64
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Release|x64.Build.0 = Release|x64
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Release|x64.Deploy.0 = Release|x64
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Release|x86.ActiveCfg = Release|x86
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Release|x86.Build.0 = Release|x86
+		{D8E11CCF-4DA9-44A8-8672-199836F3C289}.Release|x86.Deploy.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {636B1936-42DA-4291-A5E4-C05651DE8CB6}
+	EndGlobalSection
+EndGlobal
