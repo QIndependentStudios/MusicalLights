@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Drawing;
 using System.Linq;
 
@@ -13,14 +15,15 @@ namespace QIndependentStudios.MusicalLights.Core
         public KeyFrame(TimeSpan time) : this(time, new Dictionary<int, Color>())
         { }
 
+        [JsonConstructor]
         public KeyFrame(TimeSpan time, IDictionary<int, Color> lightValues)
         {
             Time = time;
-            LightValues = lightValues.ToDictionary(x => x.Key, x => x.Value);
+            LightValues = new ReadOnlyDictionary<int, Color>(lightValues);
         }
 
         public TimeSpan Time { get; set; }
-        public Dictionary<int, Color> LightValues { get; }
+        public ReadOnlyDictionary<int, Color> LightValues { get; }
 
         public override string ToString()
         {

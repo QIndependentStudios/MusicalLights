@@ -7,12 +7,12 @@ namespace QIndependentStudios.MusicalLights.Core
 {
     public class Sequence
     {
-        [JsonProperty(PropertyName = nameof(KeyFrames))]
         private List<KeyFrame> _keyFrames = new List<KeyFrame>();
 
         public Sequence(int version = 1) : this(new List<KeyFrame>(), version)
         { }
 
+        [JsonConstructor]
         public Sequence(IEnumerable<KeyFrame> keyFrames, int version = 1)
         {
             if (keyFrames == null)
@@ -34,7 +34,6 @@ namespace QIndependentStudios.MusicalLights.Core
 
         public int Version { get; set; }
 
-        [JsonIgnore]
         public IReadOnlyCollection<KeyFrame> KeyFrames => _keyFrames.AsReadOnly();
 
         public static Sequence FromJson(string json)
