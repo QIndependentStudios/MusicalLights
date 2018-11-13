@@ -13,6 +13,7 @@ namespace QIndependentStudios.MusicalLights.Core
 
         public virtual void Play()
         {
+            Stop();
             _timer = new Timer(TimerCallback, null, 0, 100);
         }
 

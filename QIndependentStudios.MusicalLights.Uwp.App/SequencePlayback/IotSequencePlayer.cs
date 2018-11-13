@@ -21,14 +21,16 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
             _player.Source = mediaSource;
             _frames = sequence.KeyFrames?.OrderBy(f => f.Time).ToList() ?? new List<KeyFrame>();
 
-            var maxNumberOfLights = _frames.SelectMany(f => f.LightValues).Max(p => p.Key);
+            var lightValues = _frames.SelectMany(f => f.LightValues).ToList();
+            var maxNumberOfLights = lightValues.Any() ? lightValues.Max(p => p.Key) : 0;
+
+            DestroyDotStar();
             _dotStar = new DotStar((uint)maxNumberOfLights);
             await _dotStar.BeginAsync();
         }
 
         public override void Play()
         {
-            Stop();
             base.Play();
             _player.Play();
         }
@@ -38,14 +40,14 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
             base.Stop();
             _player.Pause();
             _player.PlaybackSession.Position = new TimeSpan();
-            _dotStar?.End();
-            _dotStar = null;
+            _dotStar?.Clear();
         }
 
         public void Dispose()
         {
             Stop();
             _player.Dispose();
+            DestroyDotStar();
         }
 
         protected override TimeSpan GetElapsedTime()
@@ -61,6 +63,16 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
                 _dotStar.SetPixelColor(lightValue.Key, color.R, color.G, color.B);
             }
             _dotStar.Show();
+        }
+
+        private void DestroyDotStar()
+        {
+            try
+            {
+                _dotStar?.End();
+            }
+            catch { }
+            _dotStar = null;
         }
     }
 }
