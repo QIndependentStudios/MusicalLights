@@ -60,9 +60,9 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
             foreach (var lightValue in keyFrame.LightValues)
             {
                 var color = lightValue.Value;
-                _dotStar.SetPixelColor(lightValue.Key, color.R, color.G, color.B);
+                _dotStar?.SetPixelColor(lightValue.Key, color.R, color.G, color.B);
             }
-            _dotStar.Show();
+            _dotStar?.Show();
         }
 
         private void DestroyDotStar()
