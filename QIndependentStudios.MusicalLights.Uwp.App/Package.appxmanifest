@@ -7,14 +7,14 @@
   IgnorableNamespaces="uap mp">
 
   <Identity
-    Name="206b3a43-8f63-4a0e-bc54-0d831cf54651"
+    Name="a1e3bcf0-ef48-414d-9939-693a64cf43ed"
     Publisher="CN=qngo"
     Version="1.0.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="206b3a43-8f63-4a0e-bc54-0d831cf54651" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="a1e3bcf0-ef48-414d-9939-693a64cf43ed" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>QIndependentStudios.MusicalLights.Player</DisplayName>
+    <DisplayName>QIndependentStudios.MusicalLights.Uwp.App</DisplayName>
     <PublisherDisplayName>qngo</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -30,12 +30,12 @@
   <Applications>
     <Application Id="App"
       Executable="$targetnametoken$.exe"
-      EntryPoint="QIndependentStudios.MusicalLights.Player.App">
+      EntryPoint="QIndependentStudios.MusicalLights.Uwp.App.App">
       <uap:VisualElements
-        DisplayName="QIndependentStudios.MusicalLights.Player"
+        DisplayName="QIndependentStudios.MusicalLights.Uwp.App"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png"
-        Description="QIndependentStudios.MusicalLights.Player"
+        Description="QIndependentStudios.MusicalLights.Uwp.App"
         BackgroundColor="transparent">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
