@@ -24,9 +24,13 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
             var lightValues = _frames.SelectMany(f => f.LightValues).ToList();
             var maxNumberOfLights = lightValues.Any() ? lightValues.Max(p => p.Key) : 0;
 
-            DestroyDotStar();
-            _dotStar = new DotStar((uint)maxNumberOfLights);
-            await _dotStar.BeginAsync();
+            if (_dotStar == null)
+            {
+                _dotStar = new DotStar((uint)maxNumberOfLights, DotStar.DOTSTAR_BGR);
+                await _dotStar.BeginAsync();
+            }
+            else
+                _dotStar.UpdateLength((uint)maxNumberOfLights);
         }
 
         public override void Play()
@@ -41,13 +45,17 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
             _player.Pause();
             _player.PlaybackSession.Position = new TimeSpan();
             _dotStar?.Clear();
+            _dotStar?.Show();
         }
 
         public void Dispose()
         {
             Stop();
             _player.Dispose();
-            DestroyDotStar();
+            _dotStar?.Clear();
+            _dotStar?.Show();
+            _dotStar?.End();
+            _dotStar = null;
         }
 
         protected override TimeSpan GetElapsedTime()
@@ -60,19 +68,9 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
             foreach (var lightValue in keyFrame.LightValues)
             {
                 var color = lightValue.Value;
-                _dotStar?.SetPixelColor(lightValue.Key, color.R, color.G, color.B);
+                _dotStar?.SetPixelColor(lightValue.Key - 1, color.R, color.G, color.B);
             }
             _dotStar?.Show();
-        }
-
-        private void DestroyDotStar()
-        {
-            try
-            {
-                _dotStar?.End();
-            }
-            catch { }
-            _dotStar = null;
         }
     }
 }
