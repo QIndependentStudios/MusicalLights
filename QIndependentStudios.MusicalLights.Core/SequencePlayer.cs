@@ -7,6 +7,7 @@ namespace QIndependentStudios.MusicalLights.Core
 {
     public abstract class SequencePlayer
     {
+        private const int TimerCallbackInterval = 10;
         protected Timer _timer;
         protected List<KeyFrame> _frames = new List<KeyFrame>();
         protected KeyFrame _currentFrame;
@@ -14,7 +15,7 @@ namespace QIndependentStudios.MusicalLights.Core
         public virtual void Play()
         {
             Stop();
-            _timer = new Timer(TimerCallback, null, 0, 100);
+            _timer = new Timer(TimerCallback, null, 0, TimerCallbackInterval);
         }
 
         public virtual void Stop()

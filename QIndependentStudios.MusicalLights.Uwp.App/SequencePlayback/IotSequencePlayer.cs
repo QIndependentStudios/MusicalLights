@@ -10,6 +10,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
 {
     public class IotSequencePlayer : SequencePlayer, IDisposable
     {
+        private const double Brightness = 0.125;
         private readonly MediaPlayer _player = new MediaPlayer();
         private DotStar _dotStar;
 
@@ -26,7 +27,10 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
 
             if (_dotStar == null)
             {
-                _dotStar = new DotStar((uint)maxNumberOfLights, DotStar.DOTSTAR_BGR);
+                _dotStar = new DotStar((uint)maxNumberOfLights, DotStar.DOTSTAR_BGR)
+                {
+                    Brightness = (int)(Brightness * 256) - 1
+                };
                 await _dotStar.BeginAsync();
             }
             else
