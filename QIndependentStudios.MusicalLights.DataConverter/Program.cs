@@ -15,7 +15,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
         private static void Main(string[] args)
         {
             Console.WriteLine("Enter csv data file path:");
-            var path = Console.ReadLine();
+            var path = Console.ReadLine().Trim('"');
 
             Console.WriteLine("Reading csv data...");
             var text = File.ReadAllText(path);
@@ -24,7 +24,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
             var data = ParseData(text);
 
             Console.WriteLine("Constructing sequence...");
-            var sequence = ConvertToModel(data);
+            var sequence = ConvertToModel($"{Path.GetFileNameWithoutExtension(path)}.mp3", data);
 
             Console.WriteLine("Writing sequence json data...");
             var outputPath = Path.ChangeExtension(path, ".json");
@@ -37,7 +37,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
 #endif
         }
 
-        private static Sequence ConvertToModel(IDictionary<(double, int), Color> data)
+        private static Sequence ConvertToModel(string audio, IDictionary<(double, int), Color> data)
         {
             var frames = new List<KeyFrame>();
             foreach (var framePosition in data.Keys.Select(k => k.Item1).Distinct().OrderBy(x => x))
@@ -47,7 +47,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
                 var msPosition = framePosition / FramesPerSecond * MillisecondsPerSecond;
                 frames.Add(new KeyFrame(TimeSpan.FromMilliseconds(msPosition), lightValues));
             }
-            return new Sequence(frames);
+            return new Sequence(frames, audio);
         }
 
         private static IDictionary<(double, int), Color> ParseData(string text)
@@ -60,9 +60,9 @@ namespace QIndependentStudios.MusicalLights.DataConverter
                 if (values.Length >= 5
                     && double.TryParse(values[1], out var frame)
                     && int.TryParse(values[0], out var lightId)
-                    && int.TryParse(values[2], out var r)
-                    && int.TryParse(values[3], out var g)
-                    && int.TryParse(values[4], out var b))
+                    && int.TryParse(values[3], out var r)
+                    && int.TryParse(values[4], out var g)
+                    && int.TryParse(values[5], out var b))
                     sequenceData[(frame, lightId)] = Color.FromArgb(r, g, b);
             }
 

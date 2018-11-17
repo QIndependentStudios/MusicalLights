@@ -9,16 +9,17 @@ namespace QIndependentStudios.MusicalLights.Core
     {
         private List<KeyFrame> _keyFrames = new List<KeyFrame>();
 
-        public Sequence(int version = 1) : this(new List<KeyFrame>(), version)
+        public Sequence(int version = 1) : this(new List<KeyFrame>(), null, version)
         { }
 
         [JsonConstructor]
-        public Sequence(IEnumerable<KeyFrame> keyFrames, int version = 1)
+        public Sequence(IEnumerable<KeyFrame> keyFrames, string audio = null, int version = 1)
         {
             if (keyFrames == null)
                 throw new ArgumentNullException(nameof(keyFrames));
 
             Version = version;
+            Audio = audio;
 
             foreach (var keyFrame in keyFrames)
             {
@@ -32,7 +33,9 @@ namespace QIndependentStudios.MusicalLights.Core
             }
         }
 
-        public int Version { get; set; }
+        public int Version { get; }
+
+        public string Audio { get; }
 
         public IReadOnlyCollection<KeyFrame> KeyFrames => _keyFrames.AsReadOnly();
 

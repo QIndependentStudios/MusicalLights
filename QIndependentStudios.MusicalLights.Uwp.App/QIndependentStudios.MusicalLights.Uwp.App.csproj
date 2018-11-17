@@ -106,9 +106,10 @@
       <SubType>Designer</SubType>
     </AppxManifest>
     <None Include="QIndependentStudios.MusicalLights.Uwp.App_TemporaryKey.pfx" />
+    <Content Include="SequenceData\Wizards In Winter.json" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Media\Wizards In Winter %28Instrumental%29.mp3" />
+    <Content Include="Media\Wizards In Winter.mp3" />
     <Content Include="Properties\Default.rd.xml" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\SplashScreen.scale-200.png" />
