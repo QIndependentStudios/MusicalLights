@@ -2,12 +2,10 @@
 using QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback;
 using System;
 using System.Threading.Tasks;
-using Windows.Devices.Bluetooth;
-using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Media.Core;
 using Windows.Storage;
-using Windows.Storage.Streams;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Navigation;
 
 namespace QIndependentStudios.MusicalLights.Uwp.App
 {
@@ -20,71 +18,25 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
         public MainPage()
         {
             InitializeComponent();
-            StartBluetooth();
         }
 
-        private async void StartBluetooth()
+        protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            var serviceProviderResult = await GattServiceProvider.CreateAsync(BluetoothConstants.ServiceUuid);
-            if (serviceProviderResult.Error != BluetoothError.Success)
-                return;
+            base.OnNavigatedTo(e);
 
-            var serviceProvider = serviceProviderResult.ServiceProvider;
-            var commandCharacteristicResult = await serviceProvider.Service.CreateCharacteristicAsync(BluetoothConstants.CommandCharacteristicUuid,
-                new GattLocalCharacteristicParameters
-                {
-                    CharacteristicProperties = GattCharacteristicProperties.Write
-                        | GattCharacteristicProperties.WriteWithoutResponse,
-                    WriteProtectionLevel = GattProtectionLevel.Plain,
-                    UserDescription = "Command Characteristic"
-                });
-            if (commandCharacteristicResult.Error != BluetoothError.Success)
-                return;
-
-            commandCharacteristicResult.Characteristic.WriteRequested += CommandCharacteristic_WriteRequested;
-
-            var advertisingParameters = new GattServiceProviderAdvertisingParameters
-            {
-                IsConnectable = (await BluetoothAdapter.GetDefaultAsync())?.IsPeripheralRoleSupported ?? false,
-                IsDiscoverable = true
-            };
-
-            serviceProvider.AdvertisementStatusChanged += ServiceProvider_AdvertisementStatusChanged;
-            serviceProvider.StartAdvertising(advertisingParameters);
+            BluetoothLEServer.Current.CommandReceived += Current_CommandReceived;
         }
 
-        private void ServiceProvider_AdvertisementStatusChanged(GattServiceProvider sender, GattServiceProviderAdvertisementStatusChangedEventArgs args)
+        protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine(args.Status);
+            base.OnNavigatingFrom(e);
+
+            BluetoothLEServer.Current.CommandReceived -= Current_CommandReceived;
         }
 
-        private async void CommandCharacteristic_WriteRequested(GattLocalCharacteristic sender, GattWriteRequestedEventArgs args)
+        private async void Current_CommandReceived(BluetoothLEServer sender, CommandReceivedEventArgs args)
         {
-            var deferral = args.GetDeferral();
-
-            var request = await args.GetRequestAsync();
-            if (request == null)
-                return;
-
-            if (request.Value.Length != 1)
-            {
-                if (request.Option == GattWriteOption.WriteWithResponse)
-                    request.RespondWithProtocolError(GattProtocolError.InvalidAttributeValueLength);
-                return;
-            }
-
-            var reader = DataReader.FromBuffer(request.Value);
-            reader.ByteOrder = ByteOrder.LittleEndian;
-
-            var commandCode = (CommandCode)reader.ReadByte();
-            if (!Enum.IsDefined(typeof(CommandCode), commandCode))
-            {
-                if (request.Option == GattWriteOption.WriteWithResponse)
-                    request.RespondWithProtocolError(GattProtocolError.InvalidPdu);
-                return;
-            }
-
-            switch (commandCode)
+            switch (args.CommandCode)
             {
                 case CommandCode.Play:
                     await PlayAsync();
@@ -97,11 +49,6 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
                 default:
                     break;
             }
-
-            if (request.Option == GattWriteOption.WriteWithResponse)
-                request.Respond();
-
-            deferral.Complete();
         }
 
         private async Task PlayAsync()
