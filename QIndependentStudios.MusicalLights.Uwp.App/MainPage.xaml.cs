@@ -49,7 +49,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
                 IsDiscoverable = true
             };
 
-            serviceProvider.AdvertisementStatusChanged += ServiceProvider_AdvertisementStatusChanged; ;
+            serviceProvider.AdvertisementStatusChanged += ServiceProvider_AdvertisementStatusChanged;
             serviceProvider.StartAdvertising(advertisingParameters);
         }
 
@@ -60,46 +60,48 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
 
         private async void CommandCharacteristic_WriteRequested(GattLocalCharacteristic sender, GattWriteRequestedEventArgs args)
         {
-            using (args.GetDeferral())
+            var deferral = args.GetDeferral();
+
+            var request = await args.GetRequestAsync();
+            if (request == null)
+                return;
+
+            if (request.Value.Length != 1)
             {
-                var request = await args.GetRequestAsync();
-                if (request == null)
-                    return;
-
-                if (request.Value.Length != 1)
-                {
-                    if (request.Option == GattWriteOption.WriteWithResponse)
-                        request.RespondWithProtocolError(GattProtocolError.InvalidAttributeValueLength);
-                    return;
-                }
-
-                var reader = DataReader.FromBuffer(request.Value);
-                reader.ByteOrder = ByteOrder.LittleEndian;
-
-                var commandValue = reader.ReadByte();
-                if (!Enum.IsDefined(typeof(CommandCode), commandValue))
-                {
-                    if (request.Option == GattWriteOption.WriteWithResponse)
-                        request.RespondWithProtocolError(GattProtocolError.InvalidPdu);
-                    return;
-                }
-
-                switch ((CommandCode)commandValue)
-                {
-                    case CommandCode.Play:
-                        await PlayAsync();
-                        break;
-                    case CommandCode.Pause:
-                        break;
-                    case CommandCode.Stop:
-                        _player.Stop();
-                        break;
-                    default:
-                        break;
-                }
-
-                request.Respond();
+                if (request.Option == GattWriteOption.WriteWithResponse)
+                    request.RespondWithProtocolError(GattProtocolError.InvalidAttributeValueLength);
+                return;
             }
+
+            var reader = DataReader.FromBuffer(request.Value);
+            reader.ByteOrder = ByteOrder.LittleEndian;
+
+            var commandCode = (CommandCode)reader.ReadByte();
+            if (!Enum.IsDefined(typeof(CommandCode), commandCode))
+            {
+                if (request.Option == GattWriteOption.WriteWithResponse)
+                    request.RespondWithProtocolError(GattProtocolError.InvalidPdu);
+                return;
+            }
+
+            switch (commandCode)
+            {
+                case CommandCode.Play:
+                    await PlayAsync();
+                    break;
+                case CommandCode.Pause:
+                    break;
+                case CommandCode.Stop:
+                    _player.Stop();
+                    break;
+                default:
+                    break;
+            }
+
+            if (request.Option == GattWriteOption.WriteWithResponse)
+                request.Respond();
+
+            deferral.Complete();
         }
 
         private async Task PlayAsync()

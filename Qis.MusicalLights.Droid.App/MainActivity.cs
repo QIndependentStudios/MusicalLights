@@ -1,13 +1,14 @@
 ﻿using Android;
 using Android.App;
 using Android.Bluetooth;
-using Android.Bluetooth.LE;
 using Android.Content;
 using Android.OS;
+using Android.Runtime;
 using Android.Support.Design.Widget;
 using Android.Support.V7.App;
 using Android.Views;
 using Android.Widget;
+using Java.Util;
 using QIndependentStudios.MusicalLights.Core;
 using System;
 
@@ -77,11 +78,11 @@ namespace Qis.MusicalLights.Droid.App
             BluetoothLEScanner.Current.DeviceDiscovered += BluetoothLEManager_DeviceDiscovered;
             BluetoothLEScanner.Current.StateChanged += BluetoothLEManager_StateChanged;
 
-            var scanFilter = new ScanFilter.Builder()
+            var scanFilter = new Android.Bluetooth.LE.ScanFilter.Builder()
                 .SetServiceUuid(ParcelUuid.FromString(BluetoothConstants.ServiceUuid.ToString()))
                 .Build();
 
-            BluetoothLEScanner.Current.StartScan(new[] { scanFilter }, new ScanSettings.Builder().Build());
+            BluetoothLEScanner.Current.StartScan(new[] { scanFilter }, new Android.Bluetooth.LE.ScanSettings.Builder().Build());
         }
 
         private void BluetoothLEManager_StateChanged(object sender, StateChangedEventArgs e)
@@ -91,7 +92,49 @@ namespace Qis.MusicalLights.Droid.App
 
         private void BluetoothLEManager_DeviceDiscovered(object sender, DeviceDiscoveredEventArgs e)
         {
-            Toast.MakeText(BaseContext, e.Device.Name + " " + e.Device.Address, ToastLength.Short).Show();
+            Toast.MakeText(BaseContext, $"{e.Device.Name} {e.Device.Address}", ToastLength.Short).Show();
+            BluetoothLEScanner.Current.StopScan();
+            var gatt = e.Device.ConnectGatt(this, false, new GattCallback(BaseContext));
+        }
+
+        protected class GattCallback : BluetoothGattCallback
+        {
+            private readonly Context _context;
+
+            public GattCallback(Context context)
+            {
+                _context = context;
+            }
+
+            public override void OnConnectionStateChange(BluetoothGatt gatt, GattStatus status, ProfileState newState)
+            {
+                if (newState == ProfileState.Connected)
+                {
+                    gatt.DiscoverServices();
+                }
+            }
+
+            public override void OnServicesDiscovered(BluetoothGatt gatt, GattStatus status)
+            {
+                var service = gatt.GetService(UUID.FromString(BluetoothConstants.ServiceUuid.ToString()));
+                if (service == null)
+                    return;
+
+                var commandCharacteristic = service.GetCharacteristic(UUID.FromString(BluetoothConstants.CommandCharacteristicUuid.ToString()));
+                if (commandCharacteristic == null)
+                    return;
+
+                if (commandCharacteristic.SetValue(new[] { (byte)CommandCode.Play }))
+                {
+                    commandCharacteristic.WriteType = GattWriteType.Default;
+                    gatt.WriteCharacteristic(commandCharacteristic);
+                }
+            }
+
+            public override void OnCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, [GeneratedEnum] GattStatus status)
+            {
+                base.OnCharacteristicWrite(gatt, characteristic, status);
+            }
         }
     }
 }
