@@ -2,7 +2,6 @@
 using QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback;
 using System;
 using System.Threading.Tasks;
-using Windows.Media.Core;
 using Windows.Storage;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -56,7 +55,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
             var sequenceFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///SequenceData/Wizards In Winter.json"));
             var sequence = Sequence.FromJson(await FileIO.ReadTextAsync(sequenceFile));
 
-            await _player.LoadAsync(MediaSource.CreateFromUri(new Uri($"ms-appx:///Media/{sequence.Audio}")), sequence);
+            await _player.LoadAsync(sequence);
             _player.Play();
         }
     }

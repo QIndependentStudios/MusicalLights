@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Windows.Media.Core;
 using Windows.Media.Playback;
 
 namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
@@ -13,14 +14,20 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
         private const double Brightness = 0.125;
         private readonly MediaPlayer _player = new MediaPlayer();
         private DotStar _dotStar;
+        private bool _hasMedia;
 
-        public async Task LoadAsync(IMediaPlaybackSource mediaSource, Sequence sequence)
+        public async Task LoadAsync(Sequence sequence)
         {
             if (sequence == null)
                 throw new ArgumentNullException(nameof(sequence));
 
-            _player.Source = mediaSource;
+            _hasMedia = !string.IsNullOrWhiteSpace(sequence.Audio);
+
+            if (_hasMedia)
+                _player.Source = MediaSource.CreateFromUri(new Uri($"ms-appx:///Media/{sequence.Audio}"));
+
             _frames = sequence.KeyFrames?.OrderBy(f => f.Time).ToList() ?? new List<KeyFrame>();
+            _lastFrame = _frames.LastOrDefault();
 
             var lightValues = _frames.SelectMany(f => f.LightValues).ToList();
             var maxNumberOfLights = lightValues.Any() ? lightValues.Max(p => p.Key) : 0;
@@ -64,7 +71,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
 
         protected override TimeSpan GetElapsedTime()
         {
-            return _player.PlaybackSession.Position;
+            return _hasMedia ? _player.PlaybackSession.Position : base.GetElapsedTime();
         }
 
         protected override void UpdateColor(KeyFrame keyFrame)

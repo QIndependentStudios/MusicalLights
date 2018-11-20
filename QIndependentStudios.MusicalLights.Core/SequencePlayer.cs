@@ -7,18 +7,43 @@ namespace QIndependentStudios.MusicalLights.Core
 {
     public abstract class SequencePlayer
     {
+        public event EventHandler SequenceCompleted;
+
         private const int TimerCallbackInterval = 10;
         protected Timer _timer;
+        protected DateTime? _startTime;
+        protected DateTime? _pauseTime;
         protected List<KeyFrame> _frames = new List<KeyFrame>();
         protected KeyFrame _currentFrame;
+        protected KeyFrame _lastFrame;
 
         public virtual void Play()
         {
-            Stop();
+            StopTimer();
+
+            if (_startTime.HasValue && _pauseTime.HasValue)
+                _startTime = _startTime.Value.AddTicks((DateTime.Now - _pauseTime.Value).Ticks);
+            else
+                _startTime = DateTime.Now;
+
+            _pauseTime = null;
             _timer = new Timer(TimerCallback, null, 0, TimerCallbackInterval);
         }
 
+        public virtual void Pause()
+        {
+            _pauseTime = DateTime.Now;
+            StopTimer();
+        }
+
         public virtual void Stop()
+        {
+            StopTimer();
+            _startTime = null;
+            _pauseTime = null;
+        }
+
+        protected void StopTimer()
         {
             _timer?.Dispose();
             _timer = null;
@@ -36,9 +61,24 @@ namespace QIndependentStudios.MusicalLights.Core
 
             if (_currentFrame != null)
                 UpdateColor(_currentFrame);
+
+            if (_lastFrame != null && _currentFrame == _lastFrame)
+                OnSequenceCompleted();
         }
 
-        protected abstract TimeSpan GetElapsedTime();
+        protected virtual TimeSpan GetElapsedTime()
+        {
+            return _startTime.HasValue
+                ? DateTime.Now - _startTime.Value
+                : new TimeSpan();
+        }
+
         protected abstract void UpdateColor(KeyFrame keyFrame);
+
+        protected virtual void OnSequenceCompleted()
+        {
+            Stop();
+            SequenceCompleted?.Invoke(this, new EventArgs());
+        }
     }
 }
