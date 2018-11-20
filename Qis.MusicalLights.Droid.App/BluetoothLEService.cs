@@ -95,21 +95,25 @@ namespace Qis.MusicalLights.Droid.App
         protected void OnConnectionStateChanged(GattStatus gattStatus, ProfileState newStatus)
         {
             _connectGattCompletionSource?.SetResult(new ConnectGattResult(gattStatus, newStatus));
+            _connectGattCompletionSource = null;
         }
 
         protected void OnServicesDiscovered(GattStatus gattStatus)
         {
             _discoverServicesCompletionSource?.SetResult(new DiscoverServicesResult(gattStatus));
+            _discoverServicesCompletionSource = null;
         }
 
         protected void OnCharacteristicRead(GattStatus gattStatus, byte[] value)
         {
             _readCharacteristicCompletionSource?.SetResult(new CharacteristicReadResult(gattStatus, value));
+            _readCharacteristicCompletionSource = null;
         }
 
         protected void OnCharacteristicWritten(GattStatus gattStatus)
         {
             _writeCharacteristicCompletionSource?.SetResult(new CharacteristicWriteResult(gattStatus));
+            _writeCharacteristicCompletionSource = null;
         }
 
         private void EnsureConnected()
