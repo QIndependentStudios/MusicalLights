@@ -108,6 +108,7 @@
     </AppxManifest>
     <None Include="QIndependentStudios.MusicalLights.Uwp.App_TemporaryKey.pfx" />
     <Content Include="SequenceData\Wizards In Winter.json" />
+    <Content Include="SequenceData\Default.json" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Media\Wizards In Winter.mp3" />

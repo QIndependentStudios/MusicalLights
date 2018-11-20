@@ -8,6 +8,7 @@ namespace QIndependentStudios.MusicalLights.Core
     public abstract class SequencePlayer
     {
         public event EventHandler SequenceCompleted;
+        public event EventHandler StateChanged;
 
         private const int TimerCallbackInterval = 10;
         protected Timer _timer;
@@ -16,6 +17,8 @@ namespace QIndependentStudios.MusicalLights.Core
         protected List<KeyFrame> _frames = new List<KeyFrame>();
         protected KeyFrame _currentFrame;
         protected KeyFrame _lastFrame;
+
+        public SequencePlayerState State { get; protected set; } = SequencePlayerState.Stopped;
 
         public virtual void Play()
         {
@@ -28,12 +31,14 @@ namespace QIndependentStudios.MusicalLights.Core
 
             _pauseTime = null;
             _timer = new Timer(TimerCallback, null, 0, TimerCallbackInterval);
+            State = SequencePlayerState.Playing;
         }
 
         public virtual void Pause()
         {
             _pauseTime = DateTime.Now;
             StopTimer();
+            State = SequencePlayerState.Paused;
         }
 
         public virtual void Stop()
@@ -41,6 +46,7 @@ namespace QIndependentStudios.MusicalLights.Core
             StopTimer();
             _startTime = null;
             _pauseTime = null;
+            State = SequencePlayerState.Stopped;
         }
 
         protected void StopTimer()
@@ -79,6 +85,11 @@ namespace QIndependentStudios.MusicalLights.Core
         {
             Stop();
             SequenceCompleted?.Invoke(this, new EventArgs());
+        }
+
+        protected virtual void OnStateChanged()
+        {
+            StateChanged?.Invoke(this, new EventArgs());
         }
     }
 }
