@@ -40,10 +40,10 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
             switch (args.CommandCode)
             {
                 case CommandCode.Play:
-                    var sequenceName = args.SequenceId.HasValue
-                        ? BluetoothConstants.GetSequenceName(args.SequenceId.Value)
-                        : BluetoothConstants.DefaultSequenceName;
-                    await PlayAsync(sequenceName);
+                    if (args.SequenceId.HasValue)
+                        await PlayAsync(BluetoothConstants.GetSequenceName(args.SequenceId.Value));
+                    else
+                        _player.Play();
                     break;
                 case CommandCode.Pause:
                     _player.Pause();

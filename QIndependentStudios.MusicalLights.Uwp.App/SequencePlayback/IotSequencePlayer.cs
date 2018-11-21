@@ -50,6 +50,12 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
             _player.Play();
         }
 
+        public override void Pause()
+        {
+            base.Pause();
+            _player.Pause();
+        }
+
         public override void Stop()
         {
             base.Stop();

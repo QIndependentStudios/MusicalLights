@@ -75,7 +75,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
         {
             var statusCharacteristicParams = new GattLocalCharacteristicParameters
             {
-                CharacteristicProperties = GattCharacteristicProperties.Read,
+                CharacteristicProperties = GattCharacteristicProperties.Read | GattCharacteristicProperties.Notify,
                 WriteProtectionLevel = GattProtectionLevel.Plain,
                 UserDescription = "Status Characteristic"
             };
@@ -130,11 +130,12 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
 
         private IBuffer GetStatusBuffer()
         {
-            var statusValue = $"{(int)CurrentStatus.PlayerState},{CurrentStatus.SequenceDescription}";
+            var statusValue = $"{(int)(CurrentStatus?.PlayerState ?? SequencePlayerState.Unknown)},{CurrentStatus?.SequenceDescription ?? "Unknown"}";
 
             var writer = new DataWriter
             {
-                ByteOrder = ByteOrder.LittleEndian
+                ByteOrder = ByteOrder.LittleEndian,
+                UnicodeEncoding = UnicodeEncoding.Utf8
             };
             writer.WriteString(statusValue);
 

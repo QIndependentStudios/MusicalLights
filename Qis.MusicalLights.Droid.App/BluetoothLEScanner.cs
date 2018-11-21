@@ -62,6 +62,7 @@ namespace Qis.MusicalLights.Droid.App
             _discoveredDevices.Clear();
 
             IsScanning = true;
+            OnStateChanged();
 
             if (withParams)
                 _adapter.BluetoothLeScanner.StartScan(filters, settings, _scanCallback);

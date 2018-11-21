@@ -17,8 +17,20 @@ namespace QIndependentStudios.MusicalLights.Core
         protected List<KeyFrame> _frames = new List<KeyFrame>();
         protected KeyFrame _currentFrame;
         protected KeyFrame _lastFrame;
+        private SequencePlayerState _state = SequencePlayerState.Stopped;
 
-        public SequencePlayerState State { get; protected set; } = SequencePlayerState.Stopped;
+        public SequencePlayerState State
+        {
+            get => _state;
+            protected set
+            {
+                if (value != _state)
+                {
+                    _state = value;
+                    OnStateChanged();
+                }
+            }
+        }
 
         public virtual void Play()
         {

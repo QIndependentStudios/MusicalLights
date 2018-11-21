@@ -1,14 +1,19 @@
 ﻿using Android.Bluetooth;
 using Android.Content;
 using Java.Util;
+using QIndependentStudios.MusicalLights.Core;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Qis.MusicalLights.Droid.App
 {
     public class BluetoothLEService
     {
+        public event EventHandler<ConnectionStateChangedEventArgs> ConnectionStateChanged;
+        public event EventHandler<CharacteristicNotificationReceivedEventArgs> CharacteristicNotificationReceived;
+
         private readonly Context _context;
         private readonly BluetoothDevice _bluetoothDevice;
 
@@ -56,9 +61,10 @@ namespace Qis.MusicalLights.Droid.App
             if (characteristic == null)
                 throw new ArgumentException("Invalid characteristic for service.", nameof(characteristicUuid));
 
-            _gatt.ReadCharacteristic(characteristic);
+            if (_gatt.ReadCharacteristic(characteristic))
+                return await _readCharacteristicCompletionSource.Task;
 
-            return await _readCharacteristicCompletionSource.Task;
+            return new CharacteristicReadResult(GattStatus.Failure, new byte[0]);
         }
 
         public async Task<CharacteristicWriteResult> WriteCharacteristicAsync(Guid serviceUuid,
@@ -81,9 +87,20 @@ namespace Qis.MusicalLights.Droid.App
                 throw new InvalidOperationException("Failed to set value to write to characteristic.");
 
             characteristic.WriteType = GattWriteType.Default;
-            _gatt.WriteCharacteristic(characteristic);
+            if (_gatt.WriteCharacteristic(characteristic))
+                return await _writeCharacteristicCompletionSource.Task;
 
-            return await _writeCharacteristicCompletionSource.Task;
+            return new CharacteristicWriteResult(GattStatus.Failure);
+        }
+
+        public void SubscribeCharacteristicNotification(Guid serviceUuid, Guid characteristicUuid)
+        {
+            ChangeCharacteristicNotificationSubscription(serviceUuid, characteristicUuid, true);
+        }
+
+        public void UnsubscribeCharacteristicNotification(Guid serviceUuid, Guid characteristicUuid)
+        {
+            ChangeCharacteristicNotificationSubscription(serviceUuid, characteristicUuid, false);
         }
 
         public void Disconnect()
@@ -96,6 +113,8 @@ namespace Qis.MusicalLights.Droid.App
         {
             _connectGattCompletionSource?.SetResult(new ConnectGattResult(gattStatus, newStatus));
             _connectGattCompletionSource = null;
+
+            ConnectionStateChanged?.Invoke(this, new ConnectionStateChangedEventArgs(gattStatus, newStatus));
         }
 
         protected void OnServicesDiscovered(GattStatus gattStatus)
@@ -116,10 +135,31 @@ namespace Qis.MusicalLights.Droid.App
             _writeCharacteristicCompletionSource = null;
         }
 
+        protected void OnCharacteristicNotificationReceived(Guid uuid, byte[] value)
+        {
+            CharacteristicNotificationReceived?.Invoke(this, new CharacteristicNotificationReceivedEventArgs(uuid, value));
+        }
+
         private void EnsureConnected()
         {
             if (_gatt == null)
                 throw new InvalidOperationException("GATT connection must be established first.");
+        }
+
+        private void ChangeCharacteristicNotificationSubscription(Guid serviceUuid, Guid characteristicUuid, bool isEnabled)
+        {
+            var service = _gatt.GetService(UUID.FromString(serviceUuid.ToString()));
+            if (service == null)
+                throw new ArgumentException("Invalid service for bluetooth device.", nameof(serviceUuid));
+
+            var characteristic = service.GetCharacteristic(UUID.FromString(characteristicUuid.ToString()));
+            if (characteristic == null)
+                throw new ArgumentException("Invalid characteristic for service.", nameof(characteristicUuid));
+
+            _gatt.SetCharacteristicNotification(characteristic, isEnabled);
+            var descriptor = characteristic.GetDescriptor(UUID.FromString(BluetoothConstants.ClientCharacteristicConfigDescriptorUuid.ToString()));
+            descriptor.SetValue((isEnabled ? BluetoothGattDescriptor.EnableNotificationValue : BluetoothGattDescriptor.DisableNotificationValue).ToArray());
+            _gatt.WriteDescriptor(descriptor);
         }
 
         protected class GattCallback : BluetoothGattCallback
@@ -141,7 +181,9 @@ namespace Qis.MusicalLights.Droid.App
                 _bluetoothLEService.OnServicesDiscovered(status);
             }
 
-            public override void OnCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, GattStatus status)
+            public override void OnCharacteristicRead(BluetoothGatt gatt,
+                BluetoothGattCharacteristic characteristic,
+                GattStatus status)
             {
                 _bluetoothLEService.OnCharacteristicRead(status, characteristic.GetValue());
             }
@@ -151,6 +193,12 @@ namespace Qis.MusicalLights.Droid.App
                 GattStatus status)
             {
                 _bluetoothLEService.OnCharacteristicWritten(status);
+            }
+
+            public override void OnCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic)
+            {
+                _bluetoothLEService.OnCharacteristicNotificationReceived(Guid.Parse(characteristic.Uuid.ToString()),
+                    characteristic.GetValue());
             }
         }
     }
@@ -197,5 +245,29 @@ namespace Qis.MusicalLights.Droid.App
         }
 
         public GattStatus GattStatus { get; }
+    }
+
+    public class ConnectionStateChangedEventArgs : EventArgs
+    {
+        public ConnectionStateChangedEventArgs(GattStatus gattStatus, ProfileState newStatus)
+        {
+            GattStatus = gattStatus;
+            NewStatus = newStatus;
+        }
+
+        public GattStatus GattStatus { get; }
+        public ProfileState NewStatus { get; }
+    }
+
+    public class CharacteristicNotificationReceivedEventArgs : EventArgs
+    {
+        public CharacteristicNotificationReceivedEventArgs(Guid characteristicUuid, byte[] value)
+        {
+            CharacteristicUuid = characteristicUuid;
+            Value = value;
+        }
+
+        public Guid CharacteristicUuid { get; }
+        public byte[] Value { get; }
     }
 }
