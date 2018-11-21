@@ -222,8 +222,11 @@ namespace Qis.MusicalLights.Droid.App
                 ShowAlert("Get Status Failed", $"Failed to get current status.");
 
             _bluetoothLEService.CharacteristicNotificationReceived += BluetoothLEService_CharacteristicNotificationReceived;
-            _bluetoothLEService.SubscribeCharacteristicNotification(BluetoothConstants.ServiceUuid,
+            var subscribeResult = _bluetoothLEService.SubscribeCharacteristicNotification(BluetoothConstants.ServiceUuid,
                 BluetoothConstants.StatusCharacteristicUuid);
+
+            if (subscribeResult.GattStatus != GattStatus.Success)
+                ShowAlert("Status Subscription Failed", $"Failed to subscribe for status changes.");
 
             UpdateStatus(readResult.Response);
 
@@ -237,6 +240,8 @@ namespace Qis.MusicalLights.Droid.App
             {
                 _bluetoothLEService.CharacteristicNotificationReceived -= BluetoothLEService_CharacteristicNotificationReceived;
                 _bluetoothLEService = null;
+                SetControlsEnabled(false);
+                _retryConnectButton.Visibility = ViewStates.Visible;
                 ShowAlert("Bluetooth Disconnected", "Device has disconnected or lost connection. Reconnect and try again.");
             }
         }

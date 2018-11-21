@@ -93,14 +93,16 @@ namespace Qis.MusicalLights.Droid.App
             return new CharacteristicWriteResult(GattStatus.Failure);
         }
 
-        public void SubscribeCharacteristicNotification(Guid serviceUuid, Guid characteristicUuid)
+        public CharacteristicSubscriptionChangeResult SubscribeCharacteristicNotification(Guid serviceUuid,
+            Guid characteristicUuid)
         {
-            ChangeCharacteristicNotificationSubscription(serviceUuid, characteristicUuid, true);
+            return ChangeCharacteristicNotificationSubscription(serviceUuid, characteristicUuid, true);
         }
 
-        public void UnsubscribeCharacteristicNotification(Guid serviceUuid, Guid characteristicUuid)
+        public CharacteristicSubscriptionChangeResult UnsubscribeCharacteristicNotification(Guid serviceUuid,
+            Guid characteristicUuid)
         {
-            ChangeCharacteristicNotificationSubscription(serviceUuid, characteristicUuid, false);
+            return ChangeCharacteristicNotificationSubscription(serviceUuid, characteristicUuid, false);
         }
 
         public void Disconnect()
@@ -146,7 +148,9 @@ namespace Qis.MusicalLights.Droid.App
                 throw new InvalidOperationException("GATT connection must be established first.");
         }
 
-        private void ChangeCharacteristicNotificationSubscription(Guid serviceUuid, Guid characteristicUuid, bool isEnabled)
+        private CharacteristicSubscriptionChangeResult ChangeCharacteristicNotificationSubscription(Guid serviceUuid,
+            Guid characteristicUuid,
+            bool isEnabled)
         {
             var service = _gatt.GetService(UUID.FromString(serviceUuid.ToString()));
             if (service == null)
@@ -156,10 +160,18 @@ namespace Qis.MusicalLights.Droid.App
             if (characteristic == null)
                 throw new ArgumentException("Invalid characteristic for service.", nameof(characteristicUuid));
 
-            _gatt.SetCharacteristicNotification(characteristic, isEnabled);
+            if (!_gatt.SetCharacteristicNotification(characteristic, isEnabled))
+                return new CharacteristicSubscriptionChangeResult(GattStatus.Failure);
+
             var descriptor = characteristic.GetDescriptor(UUID.FromString(BluetoothConstants.ClientCharacteristicConfigDescriptorUuid.ToString()));
-            descriptor.SetValue((isEnabled ? BluetoothGattDescriptor.EnableNotificationValue : BluetoothGattDescriptor.DisableNotificationValue).ToArray());
-            _gatt.WriteDescriptor(descriptor);
+            var descriptorValue = (isEnabled ? BluetoothGattDescriptor.EnableNotificationValue : BluetoothGattDescriptor.DisableNotificationValue);
+            if (!descriptor.SetValue(descriptorValue.ToArray()))
+                return new CharacteristicSubscriptionChangeResult(GattStatus.Failure);
+
+            if (!_gatt.WriteDescriptor(descriptor))
+                return new CharacteristicSubscriptionChangeResult(GattStatus.Failure);
+
+            return new CharacteristicSubscriptionChangeResult(GattStatus.Success);
         }
 
         protected class GattCallback : BluetoothGattCallback
@@ -240,6 +252,16 @@ namespace Qis.MusicalLights.Droid.App
     public class CharacteristicWriteResult
     {
         public CharacteristicWriteResult(GattStatus gattStatus)
+        {
+            GattStatus = gattStatus;
+        }
+
+        public GattStatus GattStatus { get; }
+    }
+
+    public class CharacteristicSubscriptionChangeResult
+    {
+        public CharacteristicSubscriptionChangeResult(GattStatus gattStatus)
         {
             GattStatus = gattStatus;
         }
