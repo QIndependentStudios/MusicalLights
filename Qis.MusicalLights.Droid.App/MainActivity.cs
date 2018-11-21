@@ -181,17 +181,20 @@ namespace Qis.MusicalLights.Droid.App
 
         private void BluetoothLEScanner_StateChanged(object sender, StateChangedEventArgs e)
         {
-            if (e.IsScanning == false)
+            RunOnUiThread(() =>
             {
-                _progressBar.Visibility = ViewStates.Gone;
-                if (_bluetoothLEService == null)
+                if (e.IsScanning == false)
                 {
-                    _retryConnectButton.Enabled = true;
-                    ShowAlert("Bluetooth Connection Error", "Could not find a device to connect to.");
+                    _progressBar.Visibility = ViewStates.Gone;
+                    if (_bluetoothLEService == null)
+                    {
+                        _retryConnectButton.Enabled = true;
+                        ShowAlert("Bluetooth Connection Error", "Could not find a device to connect to.");
+                    }
                 }
-            }
-            else
-                _progressBar.Visibility = ViewStates.Visible;
+                else
+                    _progressBar.Visibility = ViewStates.Visible;
+            });
         }
 
         private async void BluetoothLEScanner_DeviceDiscovered(object sender, DeviceDiscoveredEventArgs e)
@@ -241,7 +244,11 @@ namespace Qis.MusicalLights.Droid.App
                 _bluetoothLEService.CharacteristicNotificationReceived -= BluetoothLEService_CharacteristicNotificationReceived;
                 _bluetoothLEService = null;
                 SetControlsEnabled(false);
-                _retryConnectButton.Visibility = ViewStates.Visible;
+                RunOnUiThread(() =>
+                {
+                    _retryConnectButton.Visibility = ViewStates.Visible;
+                    _retryConnectButton.Enabled = true;
+                });
                 ShowAlert("Bluetooth Disconnected", "Device has disconnected or lost connection. Reconnect and try again.");
             }
         }
@@ -325,7 +332,10 @@ namespace Qis.MusicalLights.Droid.App
 
         private async Task SendCommand(CommandCode commandCode, int? sequenceId = null)
         {
-            _progressBar.Visibility = ViewStates.Visible;
+            RunOnUiThread(() =>
+            {
+                _progressBar.Visibility = ViewStates.Visible;
+            });
             SetControlsEnabled(false);
 
             var bytes = new List<byte>() { (byte)commandCode };
@@ -338,7 +348,10 @@ namespace Qis.MusicalLights.Droid.App
             var result = await _bluetoothLEService.WriteCharacteristicAsync(BluetoothConstants.ServiceUuid,
                 BluetoothConstants.CommandCharacteristicUuid,
                 bytes.ToArray());
-            _progressBar.Visibility = ViewStates.Gone;
+            RunOnUiThread(() =>
+            {
+                _progressBar.Visibility = ViewStates.Gone;
+            });
             SetControlsEnabled(true);
 
             if (result.GattStatus != GattStatus.Success)
