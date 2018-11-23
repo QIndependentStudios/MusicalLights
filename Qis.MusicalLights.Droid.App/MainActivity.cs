@@ -99,7 +99,7 @@ namespace Qis.MusicalLights.Droid.App
         {
             if (item.ItemId == Resource.Id.action_stop)
             {
-                SendCommand(CommandCode.Stop);
+                SendCommandAsync(CommandCode.Stop).RunSynchronously();
                 return true;
             }
 
@@ -216,11 +216,9 @@ namespace Qis.MusicalLights.Droid.App
 
             _bluetoothLEService.ConnectionStateChanged += BluetoothLEService_ConnectionStateChanged;
 
-            var readResult = new CharacteristicReadResult(GattStatus.Failure, new byte[0]);
-            var readTask = _bluetoothLEService.ReadCharacteristicAsync(BluetoothConstants.ServiceUuid,
+            var readResult = await _bluetoothLEService.ReadCharacteristicAsync(BluetoothConstants.ServiceUuid,
                 BluetoothConstants.StatusCharacteristicUuid);
-            if (await Task.WhenAny(readTask, Task.Delay(10000)) == readTask)
-                readResult = readTask.Result;
+
             _progressBar.Visibility = ViewStates.Gone;
 
             if (readResult.GattStatus != GattStatus.Success)
@@ -304,27 +302,27 @@ namespace Qis.MusicalLights.Droid.App
 
         private async void DefaultButton_Click(object sender, EventArgs e)
         {
-            await SendCommand(CommandCode.Play, 0);
+            await SendCommandAsync(CommandCode.Play, 0);
         }
 
         private async void RainbowButton_Click(object sender, EventArgs e)
         {
-            await SendCommand(CommandCode.Play, 1);
+            await SendCommandAsync(CommandCode.Play, 1);
         }
 
         private async void WiwButton_Click(object sender, EventArgs e)
         {
-            await SendCommand(CommandCode.Play, 2);
+            await SendCommandAsync(CommandCode.Play, 2);
         }
 
         private async void PlayButton_Click(object sender, EventArgs e)
         {
-            await SendCommand(CommandCode.Play);
+            await SendCommandAsync(CommandCode.Play);
         }
 
         private async void PauseButton_Click(object sender, EventArgs e)
         {
-            await SendCommand(CommandCode.Pause);
+            await SendCommandAsync(CommandCode.Pause);
         }
 
         private void RetryConnectButton_Click(object sender, EventArgs e)
@@ -332,7 +330,7 @@ namespace Qis.MusicalLights.Droid.App
             Init();
         }
 
-        private async Task SendCommand(CommandCode commandCode, int? sequenceId = null)
+        private async Task SendCommandAsync(CommandCode commandCode, int? sequenceId = null)
         {
             RunOnUiThread(() =>
             {

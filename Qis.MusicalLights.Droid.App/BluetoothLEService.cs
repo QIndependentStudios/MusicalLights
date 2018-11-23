@@ -31,13 +31,25 @@ namespace Qis.MusicalLights.Droid.App
 
         public async Task<ConnectGattResult> ConnectGattAsync()
         {
+            ConnectGattResult result = null;
             _connectGattCompletionSource = new TaskCompletionSource<ConnectGattResult>();
             _gatt = _bluetoothDevice.ConnectGatt(_context, false, new GattCallback(this));
-            var result = await _connectGattCompletionSource.Task;
 
-            _discoverServicesCompletionSource = new TaskCompletionSource<DiscoverServicesResult>();
-            _gatt.DiscoverServices();
-            await _discoverServicesCompletionSource.Task;
+            var completedTask = await Task.WhenAny(_connectGattCompletionSource.Task,
+                CreateTimeoutTask(new ConnectGattResult(GattStatus.Failure, ProfileState.Disconnected)));
+            result = completedTask.Result;
+            if (result.NewStatus == ProfileState.Connected)
+            {
+                _discoverServicesCompletionSource = new TaskCompletionSource<DiscoverServicesResult>();
+                var discoverTask = _discoverServicesCompletionSource.Task;
+                _gatt.DiscoverServices();
+
+                var completedDiscoverTask = await Task.WhenAny(_discoverServicesCompletionSource.Task,
+                    CreateTimeoutTask(new DiscoverServicesResult(GattStatus.Failure)));
+                if (completedDiscoverTask != discoverTask)
+                    return new ConnectGattResult(GattStatus.Failure, result.NewStatus);
+            }
+
             return result;
         }
 
@@ -55,14 +67,18 @@ namespace Qis.MusicalLights.Droid.App
 
             var service = _gatt.GetService(UUID.FromString(serviceUuid.ToString()));
             if (service == null)
-                throw new ArgumentException("Invalid service for bluetooth device.", nameof(serviceUuid));
+                return new CharacteristicReadResult(GattStatus.Failure, new byte[0]);
 
             var characteristic = service.GetCharacteristic(UUID.FromString(characteristicUuid.ToString()));
             if (characteristic == null)
-                throw new ArgumentException("Invalid characteristic for service.", nameof(characteristicUuid));
+                return new CharacteristicReadResult(GattStatus.Failure, new byte[0]);
 
             if (_gatt.ReadCharacteristic(characteristic))
-                return await _readCharacteristicCompletionSource.Task;
+            {
+                var completedTask = await Task.WhenAny(_readCharacteristicCompletionSource.Task,
+                    CreateTimeoutTask(new CharacteristicReadResult(GattStatus.Failure, new byte[0])));
+                return completedTask.Result;
+            }
 
             return new CharacteristicReadResult(GattStatus.Failure, new byte[0]);
         }
@@ -77,18 +93,22 @@ namespace Qis.MusicalLights.Droid.App
 
             var service = _gatt.GetService(UUID.FromString(serviceUuid.ToString()));
             if (service == null)
-                throw new ArgumentException("Invalid service for bluetooth device.", nameof(serviceUuid));
+                return new CharacteristicWriteResult(GattStatus.Failure);
 
             var characteristic = service.GetCharacteristic(UUID.FromString(characteristicUuid.ToString()));
             if (characteristic == null)
-                throw new ArgumentException("Invalid characteristic for service.", nameof(characteristicUuid));
+                return new CharacteristicWriteResult(GattStatus.Failure);
 
             if (!characteristic.SetValue(value))
-                throw new InvalidOperationException("Failed to set value to write to characteristic.");
+                return new CharacteristicWriteResult(GattStatus.Failure);
 
             characteristic.WriteType = GattWriteType.Default;
             if (_gatt.WriteCharacteristic(characteristic))
-                return await _writeCharacteristicCompletionSource.Task;
+            {
+                var completedTask = await Task.WhenAny(_writeCharacteristicCompletionSource.Task,
+                    CreateTimeoutTask(new CharacteristicWriteResult(GattStatus.Failure)));
+                return completedTask.Result;
+            }
 
             return new CharacteristicWriteResult(GattStatus.Failure);
         }
@@ -154,11 +174,11 @@ namespace Qis.MusicalLights.Droid.App
         {
             var service = _gatt.GetService(UUID.FromString(serviceUuid.ToString()));
             if (service == null)
-                throw new ArgumentException("Invalid service for bluetooth device.", nameof(serviceUuid));
+                return new CharacteristicSubscriptionChangeResult(GattStatus.Failure);
 
             var characteristic = service.GetCharacteristic(UUID.FromString(characteristicUuid.ToString()));
             if (characteristic == null)
-                throw new ArgumentException("Invalid characteristic for service.", nameof(characteristicUuid));
+                return new CharacteristicSubscriptionChangeResult(GattStatus.Failure);
 
             if (!_gatt.SetCharacteristicNotification(characteristic, isEnabled))
                 return new CharacteristicSubscriptionChangeResult(GattStatus.Failure);
@@ -172,6 +192,12 @@ namespace Qis.MusicalLights.Droid.App
                 return new CharacteristicSubscriptionChangeResult(GattStatus.Failure);
 
             return new CharacteristicSubscriptionChangeResult(GattStatus.Success);
+        }
+
+        private async Task<T> CreateTimeoutTask<T>(T response)
+        {
+            await Task.Delay(3000);
+            return response;
         }
 
         protected class GattCallback : BluetoothGattCallback
