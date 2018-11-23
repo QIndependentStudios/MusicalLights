@@ -42,7 +42,9 @@ namespace Qis.MusicalLights.Droid.App
             var toolbar = FindViewById<Android.Support.V7.Widget.Toolbar>(Resource.Id.toolbar);
             SetSupportActionBar(toolbar);
 
+            BluetoothLEScanner.Current.DeviceDiscovered -= BluetoothLEScanner_DeviceDiscovered;
             BluetoothLEScanner.Current.DeviceDiscovered += BluetoothLEScanner_DeviceDiscovered;
+            BluetoothLEScanner.Current.StateChanged -= BluetoothLEScanner_StateChanged;
             BluetoothLEScanner.Current.StateChanged += BluetoothLEScanner_StateChanged;
 
             _defaultButton = FindViewById<Button>(Resource.Id.defaultButton);

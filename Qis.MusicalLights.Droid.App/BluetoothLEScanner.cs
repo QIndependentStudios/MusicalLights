@@ -13,7 +13,7 @@ namespace Qis.MusicalLights.Droid.App
         public event EventHandler<StateChangedEventArgs> StateChanged;
         public event EventHandler<DeviceDiscoveredEventArgs> DeviceDiscovered;
 
-        protected const int _scanTimeout = 30000;
+        protected const int _scanTimeout = 10000;
 
         private static readonly ScanCallback _scanCallback;
 
