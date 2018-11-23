@@ -210,6 +210,7 @@ namespace Qis.MusicalLights.Droid.App
             if (result.NewStatus != ProfileState.Connected)
             {
                 _retryConnectButton.Enabled = true;
+                _progressBar.Visibility = ViewStates.Gone;
                 ShowAlert("Bluetooth Connection Error", "Could not connect to device.");
                 return;
             }

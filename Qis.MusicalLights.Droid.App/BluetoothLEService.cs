@@ -16,6 +16,7 @@ namespace Qis.MusicalLights.Droid.App
 
         private readonly Context _context;
         private readonly BluetoothDevice _bluetoothDevice;
+        private readonly HashSet<(Guid service, Guid characteristic)> _subscriptions = new HashSet<(Guid, Guid)>();
 
         private BluetoothGatt _gatt;
         private TaskCompletionSource<ConnectGattResult> _connectGattCompletionSource;
@@ -38,6 +39,7 @@ namespace Qis.MusicalLights.Droid.App
             var completedTask = await Task.WhenAny(_connectGattCompletionSource.Task,
                 CreateTimeoutTask(new ConnectGattResult(GattStatus.Failure, ProfileState.Disconnected)));
             result = completedTask.Result;
+
             if (result.NewStatus == ProfileState.Connected)
             {
                 _discoverServicesCompletionSource = new TaskCompletionSource<DiscoverServicesResult>();
@@ -45,10 +47,15 @@ namespace Qis.MusicalLights.Droid.App
                 _gatt.DiscoverServices();
 
                 var completedDiscoverTask = await Task.WhenAny(_discoverServicesCompletionSource.Task,
-                    CreateTimeoutTask(new DiscoverServicesResult(GattStatus.Failure)));
+                    CreateTimeoutTask(new DiscoverServicesResult(GattStatus.Failure), 10000));
                 if (completedDiscoverTask != discoverTask)
-                    return new ConnectGattResult(GattStatus.Failure, result.NewStatus);
+                {
+                    Disconnect();
+                    return new ConnectGattResult(GattStatus.Failure, ProfileState.Disconnected);
+                }
             }
+            else
+                Disconnect();
 
             return result;
         }
@@ -127,8 +134,17 @@ namespace Qis.MusicalLights.Droid.App
 
         public void Disconnect()
         {
-            _gatt?.Disconnect();
-            _gatt = null;
+            try
+            {
+                foreach (var subscription in _subscriptions)
+                {
+                    UnsubscribeCharacteristicNotification(subscription.service, subscription.characteristic);
+                }
+
+                _gatt?.Disconnect();
+                _gatt = null;
+            }
+            catch (Exception) { }
         }
 
         protected void OnConnectionStateChanged(GattStatus gattStatus, ProfileState newStatus)
@@ -184,19 +200,24 @@ namespace Qis.MusicalLights.Droid.App
                 return new CharacteristicSubscriptionChangeResult(GattStatus.Failure);
 
             var descriptor = characteristic.GetDescriptor(UUID.FromString(BluetoothConstants.ClientCharacteristicConfigDescriptorUuid.ToString()));
-            var descriptorValue = (isEnabled ? BluetoothGattDescriptor.EnableNotificationValue : BluetoothGattDescriptor.DisableNotificationValue);
+            var descriptorValue = isEnabled ? BluetoothGattDescriptor.EnableNotificationValue : BluetoothGattDescriptor.DisableNotificationValue;
             if (!descriptor.SetValue(descriptorValue.ToArray()))
                 return new CharacteristicSubscriptionChangeResult(GattStatus.Failure);
 
             if (!_gatt.WriteDescriptor(descriptor))
                 return new CharacteristicSubscriptionChangeResult(GattStatus.Failure);
 
+            _subscriptions.Remove((serviceUuid, characteristicUuid));
+
+            if (isEnabled)
+                _subscriptions.Add((serviceUuid, characteristicUuid));
+
             return new CharacteristicSubscriptionChangeResult(GattStatus.Success);
         }
 
-        private async Task<T> CreateTimeoutTask<T>(T response)
+        private async Task<T> CreateTimeoutTask<T>(T response, int timeout = 5000)
         {
-            await Task.Delay(3000);
+            await Task.Delay(timeout);
             return response;
         }
 
