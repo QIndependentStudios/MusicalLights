@@ -6,7 +6,7 @@ namespace QIndependentStudios.MusicalLights.Core
 {
     public class BluetoothConstants
     {
-        public const string DefaultSequenceName = "Default";
+        public const string DefaultSequenceName = "Twinkle";
 
         // This is defined for Bluetooth and should never change.
         public static readonly Guid ClientCharacteristicConfigDescriptorUuid = Guid.Parse("00002902-0000-1000-8000-00805F9B34FB");
@@ -18,6 +18,7 @@ namespace QIndependentStudios.MusicalLights.Core
         public static readonly IReadOnlyDictionary<int, string> SequenceIdToName = new ReadOnlyDictionary<int, string>(new Dictionary<int, string>
         {
             { 0, DefaultSequenceName },
+            { 1, "Rainbow" },
             { 2, "Wizards In Winter" }
         });
 

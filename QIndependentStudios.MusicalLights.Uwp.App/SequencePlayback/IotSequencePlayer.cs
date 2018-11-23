@@ -21,10 +21,14 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
             if (sequence == null)
                 throw new ArgumentNullException(nameof(sequence));
 
+            Stop();
+
             _hasMedia = !string.IsNullOrWhiteSpace(sequence.Audio);
 
             if (_hasMedia)
                 _player.Source = MediaSource.CreateFromUri(new Uri($"ms-appx:///Media/{sequence.Audio}"));
+            else
+                _player.Source = null;
 
             _frames = sequence.KeyFrames?.OrderBy(f => f.Time).ToList() ?? new List<KeyFrame>();
             _lastFrame = _frames.LastOrDefault();

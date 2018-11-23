@@ -20,12 +20,13 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
             InitializeComponent();
         }
 
-        protected override void OnNavigatedTo(NavigationEventArgs e)
+        protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
 
             BluetoothLEServer.Current.CommandReceived += Current_CommandReceived;
             _player.StateChanged += Player_StateChanged;
+            await PlayAsync(BluetoothConstants.DefaultSequenceName);
         }
 
         protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
