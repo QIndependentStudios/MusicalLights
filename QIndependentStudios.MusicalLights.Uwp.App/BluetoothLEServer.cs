@@ -43,7 +43,6 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
                 _gattServiceProvider = serviceProviderResult.ServiceProvider;
 
                 await CreateCharacteristics(_gattServiceProvider);
-                _gattServiceProvider.AdvertisementStatusChanged += ServiceProvider_AdvertisementStatusChanged;
             }
 
             var advertisingParameters = new GattServiceProviderAdvertisingParameters
@@ -108,12 +107,6 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
 
             _statusCharacteristic.ReadRequested += StatusCharacteristic_ReadRequested;
             commandCharacteristicResult.Characteristic.WriteRequested += CommandCharacteristic_WriteRequested;
-        }
-
-        private void ServiceProvider_AdvertisementStatusChanged(GattServiceProvider sender,
-            GattServiceProviderAdvertisementStatusChangedEventArgs args)
-        {
-            System.Diagnostics.Debug.WriteLine(args.Status);
         }
 
         private async void StatusCharacteristic_ReadRequested(GattLocalCharacteristic sender, GattReadRequestedEventArgs args)

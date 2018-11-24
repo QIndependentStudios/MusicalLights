@@ -11,7 +11,7 @@ namespace QIndependentStudios.MusicalLights.Core
         public event EventHandler SequenceCompleted;
         public event EventHandler StateChanged;
 
-        private const int TimerCallbackInterval = 20;
+        private const int TimerCallbackInterval = 20; // Once ever 20 ms or 50hz
         protected readonly Dictionary<int, Color> _colors = new Dictionary<int, Color>();
 
         protected Timer _timer;

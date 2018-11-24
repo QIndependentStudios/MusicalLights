@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Media.Core;
 using Windows.Media.Playback;
@@ -13,6 +14,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
     public class IotSequencePlayer : SequencePlayer, IDisposable
     {
         private const double Brightness = 0.125;
+        private static readonly Semaphore _semaphore = new Semaphore(1, 5, "Dotstar");
         private readonly MediaPlayer _player = new MediaPlayer();
         private DotStar _dotStar;
         private bool _hasMedia;
@@ -86,12 +88,14 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
 
         protected override void UpdateLightColor(IDictionary<int, Color> lightColors)
         {
-            foreach (var lightValue in lightColors)
+            _semaphore.WaitOne();
+            foreach (var lightValue in lightColors.ToList())
             {
                 var color = lightValue.Value;
                 _dotStar?.SetPixelColor(lightValue.Key - 1, color.R, color.G, color.B);
             }
             _dotStar?.Show();
+            _semaphore.Release();
         }
     }
 }

@@ -76,6 +76,8 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
 
         private async Task PlayAsync(string sequenceName)
         {
+            _player.Stop();
+
             var sequenceFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri($"ms-appx:///SequenceData/{sequenceName}.json"));
             var sequence = Sequence.FromJson(await FileIO.ReadTextAsync(sequenceFile));
 
