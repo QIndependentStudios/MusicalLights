@@ -12,6 +12,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
         private const int MillisecondsPerSecond = 1000;
         private const double FramesPerSecond = 39.467;
 
+        private static readonly Random Rand = new Random();
         private static readonly TimeSpan GeneratedSeqeunceDuration = TimeSpan.FromMinutes(5);
 
         private static readonly List<Color> _colors = new List<Color>
@@ -110,13 +111,15 @@ namespace QIndependentStudios.MusicalLights.DataConverter
             const double maxStartDelay = 3;
             var transitionDuration = TimeSpan.FromSeconds(1);
 
-            var rand = new Random();
-            var sequenceData = new Dictionary<(TimeSpan, int), LightData>();
+            var sequenceData = new Dictionary<(TimeSpan, int), LightData>
+            {
+                { (new TimeSpan(), 60), new LightData(InterpolationMode.None, Color.FromArgb(0, 0, 0)) }
+            };
 
             for (var i = 0; i < lightCount; i++)
             {
                 sequenceData.Add((new TimeSpan(), i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
-                sequenceData.Add((TimeSpan.FromSeconds(rand.NextDouble() * (maxStartDelay - minStartDelay) + minStartDelay), i + 1),
+                sequenceData.Add((TimeSpan.FromSeconds(GetRandomDouble(minStartDelay, Rand.Next(1, (int)maxStartDelay))), i + 1),
                      new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
             }
 
@@ -127,10 +130,10 @@ namespace QIndependentStudios.MusicalLights.DataConverter
 
                 while (time < GeneratedSeqeunceDuration)
                 {
-                    time = time.Add(TimeSpan.FromSeconds(rand.NextDouble() * (maxSeparation - minSeparation) + minSeparation));
+                    time = time.Add(TimeSpan.FromSeconds(GetRandomDouble(maxSeparation, minSeparation)));
                     sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
                     time = time.Add(transitionDuration);
-                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, _colors[rand.Next(_colors.Count)]));
+                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, _colors[Rand.Next(_colors.Count)]));
                     time = time.Add(transitionDuration);
                     sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
                 }
@@ -143,11 +146,14 @@ namespace QIndependentStudios.MusicalLights.DataConverter
         {
             Console.WriteLine("Generating rainbow sequence...");
             var transitionDuration = TimeSpan.FromSeconds(0.5);
-            var sequenceData = new Dictionary<(TimeSpan, int), LightData>();
+            var sequenceData = new Dictionary<(TimeSpan, int), LightData>
+            {
+                { (new TimeSpan(), 60), new LightData(InterpolationMode.None, Color.FromArgb(0, 0, 0)) }
+            };
 
             var time = new TimeSpan();
             var offset = 0;
-            while (time < GeneratedSeqeunceDuration)
+            while ((offset / lightCount) != 10)
             {
                 for (var i = 0; i < lightCount; i++)
                 {
@@ -207,7 +213,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
                 var msPosition = framePosition / FramesPerSecond * MillisecondsPerSecond;
                 frames.Add(new KeyFrame(TimeSpan.FromMilliseconds(msPosition), lightValues));
             }
-            return new Sequence(frames, audio);
+            return new Sequence(frames, audio, isLooped: false);
         }
 
         private static Sequence ConvertToModel(string audio, IDictionary<(TimeSpan, int), LightData> data)
@@ -219,7 +225,12 @@ namespace QIndependentStudios.MusicalLights.DataConverter
                     .ToDictionary(x => x.Key.Item2, x => x.Value);
                 frames.Add(new KeyFrame(framePosition, lightValues));
             }
-            return new Sequence(frames, audio);
+            return new Sequence(frames, audio, isLooped: true);
+        }
+
+        private static double GetRandomDouble(double min, double max)
+        {
+            return Rand.NextDouble() * (max - min) + min;
         }
     }
 }

@@ -47,7 +47,7 @@ namespace Qis.MusicalLights.Droid.App
                 _gatt.DiscoverServices();
 
                 var completedDiscoverTask = await Task.WhenAny(_discoverServicesCompletionSource.Task,
-                    CreateTimeoutTask(new DiscoverServicesResult(GattStatus.Failure), 10000));
+                    CreateTimeoutTask(new DiscoverServicesResult(GattStatus.Failure), 20000));
                 if (completedDiscoverTask != discoverTask)
                 {
                     Disconnect();
@@ -136,9 +136,9 @@ namespace Qis.MusicalLights.Droid.App
         {
             try
             {
-                foreach (var subscription in _subscriptions)
+                foreach (var (service, characteristic) in _subscriptions)
                 {
-                    UnsubscribeCharacteristicNotification(subscription.service, subscription.characteristic);
+                    UnsubscribeCharacteristicNotification(service, characteristic);
                 }
 
                 _gatt?.Disconnect();
@@ -215,7 +215,7 @@ namespace Qis.MusicalLights.Droid.App
             return new CharacteristicSubscriptionChangeResult(GattStatus.Success);
         }
 
-        private async Task<T> CreateTimeoutTask<T>(T response, int timeout = 5000)
+        private async Task<T> CreateTimeoutTask<T>(T response, int timeout = 10000)
         {
             await Task.Delay(timeout);
             return response;

@@ -24,8 +24,12 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
         {
             base.OnNavigatedTo(e);
 
+            BluetoothLEServer.Current.CommandReceived -= Current_CommandReceived;
             BluetoothLEServer.Current.CommandReceived += Current_CommandReceived;
+            _player.StateChanged -= Player_StateChanged;
             _player.StateChanged += Player_StateChanged;
+            _player.SequenceCompleted -= Player_SequenceCompleted;
+            _player.SequenceCompleted += Player_SequenceCompleted;
             await PlayAsync(BluetoothConstants.DefaultSequenceName);
         }
 
@@ -34,6 +38,8 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
             base.OnNavigatingFrom(e);
 
             BluetoothLEServer.Current.CommandReceived -= Current_CommandReceived;
+            _player.StateChanged -= Player_StateChanged;
+            _player.SequenceCompleted -= Player_SequenceCompleted;
         }
 
         private async void Current_CommandReceived(BluetoothLEServer sender, CommandReceivedEventArgs args)
@@ -60,6 +66,12 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
         private async void Player_StateChanged(object sender, EventArgs e)
         {
             await BluetoothLEServer.Current.UpdateStatusAsync(_player.State, _sequenceDescription);
+        }
+
+        private async void Player_SequenceCompleted(object sender, EventArgs e)
+        {
+            if (!_player.IsSequenceLooped)
+                await PlayAsync(BluetoothConstants.DefaultSequenceName);
         }
 
         private async Task PlayAsync(string sequenceName)
