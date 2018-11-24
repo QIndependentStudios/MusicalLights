@@ -12,6 +12,8 @@ namespace QIndependentStudios.MusicalLights.DataConverter
         private const int MillisecondsPerSecond = 1000;
         private const double FramesPerSecond = 39.467;
 
+        private static readonly TimeSpan GeneratedSeqeunceDuration = TimeSpan.FromMinutes(5);
+
         private static readonly List<Color> _colors = new List<Color>
         {
             Color.FromArgb(255, 0, 0),
@@ -75,7 +77,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
 
         private static void Generate(string type, int lightCount)
         {
-            var sequenceData = new Dictionary<(TimeSpan, int), Color>();
+            var sequenceData = new Dictionary<(TimeSpan, int), LightData>();
             var outputPath = "";
             switch (type)
             {
@@ -99,66 +101,69 @@ namespace QIndependentStudios.MusicalLights.DataConverter
             Console.WriteLine($"Json data written to {outputPath}");
         }
 
-        private static Dictionary<(TimeSpan, int), Color> GenerateTwinkle(int lightCount)
+        private static Dictionary<(TimeSpan, int), LightData> GenerateTwinkle(int lightCount)
         {
             Console.WriteLine("Generating twinkle sequence...");
-            const double minSeparation = 2;
-            const double maxSeparation = 4;
+            const double minSeparation = 10;
+            const double maxSeparation = 30;
             const double minStartDelay = 0;
             const double maxStartDelay = 3;
-            var twinkleDuration = TimeSpan.FromSeconds(2);
+            var transitionDuration = TimeSpan.FromSeconds(1);
 
             var rand = new Random();
-            var sequenceData = new Dictionary<(TimeSpan, int), Color>();
+            var sequenceData = new Dictionary<(TimeSpan, int), LightData>();
 
             for (var i = 0; i < lightCount; i++)
             {
-                sequenceData.Add((new TimeSpan(), i + 1), Color.FromArgb(0));
-                sequenceData.Add((TimeSpan.FromSeconds(rand.NextDouble() * (maxStartDelay - minStartDelay) + minStartDelay), i + 1), Color.FromArgb(0));
+                sequenceData.Add((new TimeSpan(), i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
+                sequenceData.Add((TimeSpan.FromSeconds(rand.NextDouble() * (maxStartDelay - minStartDelay) + minStartDelay), i + 1),
+                     new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
             }
 
             for (var i = 0; i < lightCount; i++)
             {
                 var frames = sequenceData.Where(x => x.Key.Item2 == i + 1).ToList();
-                var moment = frames.Any() ? frames.Last().Key.Item1 : new TimeSpan();
+                var time = frames.Any() ? frames.Last().Key.Item1 : new TimeSpan();
 
-                while (moment < TimeSpan.FromMinutes(1))
+                while (time < GeneratedSeqeunceDuration)
                 {
-                    moment = moment.Add(TimeSpan.FromSeconds(rand.NextDouble() * (maxSeparation - minSeparation) + minSeparation));
-                    sequenceData.Add((moment, i + 1), _colors[rand.Next(_colors.Count)]);
-                    moment = moment.Add(twinkleDuration);
-                    sequenceData.Add((moment, i + 1), Color.FromArgb(0));
+                    time = time.Add(TimeSpan.FromSeconds(rand.NextDouble() * (maxSeparation - minSeparation) + minSeparation));
+                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
+                    time = time.Add(transitionDuration);
+                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, _colors[rand.Next(_colors.Count)]));
+                    time = time.Add(transitionDuration);
+                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
                 }
             }
 
             return sequenceData;
         }
 
-        private static Dictionary<(TimeSpan, int), Color> GenerateRainbow(int lightCount)
+        private static Dictionary<(TimeSpan, int), LightData> GenerateRainbow(int lightCount)
         {
             Console.WriteLine("Generating rainbow sequence...");
             var transitionDuration = TimeSpan.FromSeconds(0.5);
-            var sequenceData = new Dictionary<(TimeSpan, int), Color>();
+            var sequenceData = new Dictionary<(TimeSpan, int), LightData>();
 
-            var moment = new TimeSpan();
+            var time = new TimeSpan();
             var offset = 0;
-            while (moment < TimeSpan.FromMinutes(1))
+            while (time < GeneratedSeqeunceDuration)
             {
                 for (var i = 0; i < lightCount; i++)
                 {
-                    sequenceData.Add((moment, i + 1), _colors[(i + offset) % _colors.Count]);
+                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, _colors[(i + offset) % _colors.Count]));
                 }
 
-                moment = moment.Add(transitionDuration);
+                time = time.Add(transitionDuration);
                 offset++;
             }
 
             return sequenceData;
         }
 
-        private static IDictionary<(double, int), Color> ParseData(string text)
+        private static IDictionary<(double, int), LightData> ParseData(string text)
         {
-            var sequenceData = new Dictionary<(double, int), Color>();
+            var sequenceData = new Dictionary<(double, int), LightData>();
 
             foreach (var line in text.Split(Environment.NewLine))
             {
@@ -168,13 +173,14 @@ namespace QIndependentStudios.MusicalLights.DataConverter
                     && int.TryParse(values[0], out var lightId)
                     && int.TryParse(values[3], out var r)
                     && int.TryParse(values[4], out var g)
-                    && int.TryParse(values[5], out var b))
+                    && int.TryParse(values[5], out var b)
+                    && int.TryParse(values[6], out var interpolationMode))
                 {
                     var color = Color.FromArgb(r, g, b);
                     if (color.ToArgb() == Color.White.ToArgb())
                         color = Color.FromArgb(255, 160, 72);
 
-                    sequenceData[(frame, lightId)] = color;
+                    sequenceData[(frame, lightId)] = new LightData((InterpolationMode)interpolationMode, color);
                 }
             }
 
@@ -191,7 +197,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
             return sequenceData;
         }
 
-        private static Sequence ConvertToModel(string audio, IDictionary<(double, int), Color> data)
+        private static Sequence ConvertToModel(string audio, IDictionary<(double, int), LightData> data)
         {
             var frames = new List<KeyFrame>();
             foreach (var framePosition in data.Keys.Select(k => k.Item1).Distinct().OrderBy(x => x))
@@ -204,7 +210,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
             return new Sequence(frames, audio);
         }
 
-        private static Sequence ConvertToModel(string audio, IDictionary<(TimeSpan, int), Color> data)
+        private static Sequence ConvertToModel(string audio, IDictionary<(TimeSpan, int), LightData> data)
         {
             var frames = new List<KeyFrame>();
             foreach (var framePosition in data.Keys.Select(k => k.Item1).Distinct().OrderBy(x => x))

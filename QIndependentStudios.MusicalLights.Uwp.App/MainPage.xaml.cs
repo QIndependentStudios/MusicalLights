@@ -57,9 +57,9 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
             }
         }
 
-        private void Player_StateChanged(object sender, EventArgs e)
+        private async void Player_StateChanged(object sender, EventArgs e)
         {
-            BluetoothLEServer.Current.UpdateStatus(_player.State, _sequenceDescription);
+            await BluetoothLEServer.Current.UpdateStatusAsync(_player.State, _sequenceDescription);
         }
 
         private async Task PlayAsync(string sequenceName)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading;
 
@@ -14,9 +15,11 @@ namespace QIndependentStudios.MusicalLights.Core
         protected Timer _timer;
         protected DateTime? _startTime;
         protected DateTime? _pauseTime;
-        protected List<KeyFrame> _frames = new List<KeyFrame>();
-        protected KeyFrame _currentFrame;
-        protected KeyFrame _lastFrame;
+        protected List<InterpolationFrame> _frames = new List<InterpolationFrame>();
+        protected InterpolationFrame _currentFrame;
+        protected InterpolationFrame _lastFrame;
+        protected Dictionary<int, InterpolationSpan> _inProgressInterpolations;
+
         private SequencePlayerState _state = SequencePlayerState.Stopped;
 
         public SequencePlayerState State
@@ -61,6 +64,13 @@ namespace QIndependentStudios.MusicalLights.Core
             State = SequencePlayerState.Stopped;
         }
 
+        protected void PrepareSequenceData(Sequence sequence)
+        {
+            _frames = InterpolationData.Create(sequence)?.OrderBy(f => f.Time).ToList() ?? new List<InterpolationFrame>();
+            _lastFrame = _frames.LastOrDefault();
+            _inProgressInterpolations = new Dictionary<int, InterpolationSpan>();
+        }
+
         protected void StopTimer()
         {
             _timer?.Dispose();
@@ -69,16 +79,39 @@ namespace QIndependentStudios.MusicalLights.Core
 
         protected virtual void TimerCallback(object state)
         {
+            var calculatedColors = new Dictionary<int, Color>();
             var elapsed = GetElapsedTime();
 
+            foreach (var item in _inProgressInterpolations.ToList())
+            {
+                var progress = (elapsed - item.Value.Time).TotalMilliseconds / item.Value.Duration.TotalMilliseconds;
+                if (progress >= 1)
+                {
+                    _inProgressInterpolations.Remove(item.Key);
+                    continue;
+                }
+
+                var r = (int)Lerp(item.Value.Color.R, item.Value.NextSpan.Color.R, progress);
+                var g = (int)Lerp(item.Value.Color.G, item.Value.NextSpan.Color.G, progress);
+                var b = (int)Lerp(item.Value.Color.B, item.Value.NextSpan.Color.B, progress);
+                calculatedColors[item.Value.LightId] = Color.FromArgb(r, g, b);
+            }
+
             var frame = _frames.LastOrDefault(f => f.Time <= elapsed);
-            if (_currentFrame == frame)
-                return;
+            if (frame != null && _currentFrame != frame)
+            {
+                _currentFrame = frame;
 
-            _currentFrame = frame;
+                foreach (var interpolationSpanKvp in _currentFrame.InterpolationSpans)
+                {
+                    calculatedColors[interpolationSpanKvp.Key] = interpolationSpanKvp.Value.Color;
 
-            if (_currentFrame != null)
-                UpdateColor(_currentFrame);
+                    if (interpolationSpanKvp.Value.CanInterpolate)
+                        _inProgressInterpolations[interpolationSpanKvp.Key] = interpolationSpanKvp.Value;
+                }
+            }
+
+            UpdateLightColor(calculatedColors);
 
             if (_lastFrame != null && _currentFrame == _lastFrame)
                 OnSequenceCompleted();
@@ -91,7 +124,7 @@ namespace QIndependentStudios.MusicalLights.Core
                 : new TimeSpan();
         }
 
-        protected abstract void UpdateColor(KeyFrame keyFrame);
+        protected abstract void UpdateLightColor(IDictionary<int, Color> lightColors);
 
         protected virtual void OnSequenceCompleted()
         {
@@ -102,6 +135,11 @@ namespace QIndependentStudios.MusicalLights.Core
         protected virtual void OnStateChanged()
         {
             StateChanged?.Invoke(this, new EventArgs());
+        }
+
+        private static double Lerp(double startValue, double endValue, double progress)
+        {
+            return startValue + ((endValue - startValue) * progress);
         }
     }
 }

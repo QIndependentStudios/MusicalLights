@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Drawing;
 using System.Linq;
 
 namespace QIndependentStudios.MusicalLights.Core
@@ -12,18 +11,18 @@ namespace QIndependentStudios.MusicalLights.Core
         public KeyFrame() : this(new TimeSpan())
         { }
 
-        public KeyFrame(TimeSpan time) : this(time, new Dictionary<int, Color>())
+        public KeyFrame(TimeSpan time) : this(time, new Dictionary<int, LightData>())
         { }
 
         [JsonConstructor]
-        public KeyFrame(TimeSpan time, IDictionary<int, Color> lightValues)
+        public KeyFrame(TimeSpan time, IDictionary<int, LightData> lightValues)
         {
             Time = time;
-            LightValues = new ReadOnlyDictionary<int, Color>(lightValues);
+            LightValues = new ReadOnlyDictionary<int, LightData>(lightValues);
         }
 
-        public TimeSpan Time { get; set; }
-        public ReadOnlyDictionary<int, Color> LightValues { get; }
+        public TimeSpan Time { get; }
+        public ReadOnlyDictionary<int, LightData> LightValues { get; }
 
         public override string ToString()
         {

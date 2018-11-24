@@ -59,11 +59,12 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
             _gattServiceProvider.StopAdvertising();
         }
 
-        public async void UpdateStatus(SequencePlayerState state, string sequenceDescription)
+        public async Task UpdateStatusAsync(SequencePlayerState state, string sequenceDescription)
         {
             CurrentStatus = new DeviceStatus(state, sequenceDescription);
 
-            await _statusCharacteristic.NotifyValueAsync(GetStatusBuffer());
+            if (_statusCharacteristic != null)
+                await _statusCharacteristic.NotifyValueAsync(GetStatusBuffer());
         }
 
         protected void OnCommandReceived(CommandCode commandCode, int? sequenceId = null)

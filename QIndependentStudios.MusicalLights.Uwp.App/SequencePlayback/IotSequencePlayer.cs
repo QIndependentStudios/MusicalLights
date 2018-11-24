@@ -2,6 +2,7 @@
 using QIndependentStudios.MusicalLights.Core;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.Media.Core;
@@ -30,10 +31,9 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
             else
                 _player.Source = null;
 
-            _frames = sequence.KeyFrames?.OrderBy(f => f.Time).ToList() ?? new List<KeyFrame>();
-            _lastFrame = _frames.LastOrDefault();
+            PrepareSequenceData(sequence);
 
-            var lightValues = _frames.SelectMany(f => f.LightValues).ToList();
+            var lightValues = sequence.KeyFrames.SelectMany(f => f.LightValues).ToList();
             var maxNumberOfLights = lightValues.Any() ? lightValues.Max(p => p.Key) : 0;
 
             if (_dotStar == null)
@@ -84,9 +84,9 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
             return _hasMedia ? _player.PlaybackSession.Position : base.GetElapsedTime();
         }
 
-        protected override void UpdateColor(KeyFrame keyFrame)
+        protected override void UpdateLightColor(IDictionary<int, Color> lightColors)
         {
-            foreach (var lightValue in keyFrame.LightValues)
+            foreach (var lightValue in lightColors)
             {
                 var color = lightValue.Value;
                 _dotStar?.SetPixelColor(lightValue.Key - 1, color.R, color.G, color.B);
