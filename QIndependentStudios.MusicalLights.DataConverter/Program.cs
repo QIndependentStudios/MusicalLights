@@ -108,7 +108,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
             const double minSeparation = 10;
             const double maxSeparation = 30;
             const double minStartDelay = 0;
-            const double maxStartDelay = 3;
+            const double maxStartDelay = maxSeparation - minSeparation;
             var transitionDuration = TimeSpan.FromSeconds(1);
 
             var sequenceData = new Dictionary<(TimeSpan, int), LightData>
@@ -118,9 +118,21 @@ namespace QIndependentStudios.MusicalLights.DataConverter
 
             for (var i = 0; i < lightCount; i++)
             {
+                var initialDelay = TimeSpan.FromSeconds(GetRandomDouble(minStartDelay, maxStartDelay));
+                var time = new TimeSpan();
+
                 sequenceData.Add((new TimeSpan(), i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
-                sequenceData.Add((TimeSpan.FromSeconds(GetRandomDouble(minStartDelay, Rand.Next(1, (int)maxStartDelay))), i + 1),
-                     new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
+
+                if (initialDelay.Ticks >= 0)
+                {
+                    time = time.Add(initialDelay);
+                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
+                }
+
+                time = time.Add(transitionDuration);
+                sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, _colors[Rand.Next(_colors.Count)]));
+                time = time.Add(transitionDuration);
+                sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
             }
 
             for (var i = 0; i < lightCount; i++)
