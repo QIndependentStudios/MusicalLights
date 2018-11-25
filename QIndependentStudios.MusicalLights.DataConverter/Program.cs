@@ -43,7 +43,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
                 case "g":
                     Console.WriteLine("What type? Enter \"twinkle\" or \"rainbow\"");
                     var type = Console.ReadLine().Trim();
-                    Generate(type, 28);
+                    Generate(type, 27);
                     break;
                 default:
                     break;
@@ -94,6 +94,8 @@ namespace QIndependentStudios.MusicalLights.DataConverter
                     break;
             }
 
+            sequenceData.Add((new TimeSpan(), lightCount + 1),
+                new LightData(InterpolationMode.None, Color.FromArgb(255, 147, 41)));
             var sequence = ConvertToModel(null, sequenceData);
 
             Console.WriteLine("Writing sequence json data...");
@@ -105,7 +107,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
         private static Dictionary<(TimeSpan, int), LightData> GenerateTwinkle(int lightCount)
         {
             Console.WriteLine("Generating twinkle sequence...");
-            const double minSeparation = 10;
+            const double minSeparation = 5;
             const double maxSeparation = 30;
             const double minStartDelay = 0;
             const double maxStartDelay = maxSeparation - minSeparation;

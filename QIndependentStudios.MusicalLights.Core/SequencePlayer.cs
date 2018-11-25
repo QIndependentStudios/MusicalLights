@@ -13,6 +13,7 @@ namespace QIndependentStudios.MusicalLights.Core
 
         private const int TimerCallbackInterval = 20; // Once ever 20 ms or 50hz
         protected readonly Dictionary<int, Color> _colors = new Dictionary<int, Color>();
+        protected readonly Mutex _renderMutex = new Mutex(false, "SequenceRender");
 
         protected Timer _timer;
         protected DateTime? _startTime;
@@ -29,11 +30,11 @@ namespace QIndependentStudios.MusicalLights.Core
             get => _state;
             protected set
             {
-                if (value != _state)
-                {
-                    _state = value;
-                    OnStateChanged();
-                }
+                if (value == _state)
+                    return;
+
+                _state = value;
+                OnStateChanged();
             }
         }
 
@@ -85,7 +86,9 @@ namespace QIndependentStudios.MusicalLights.Core
         protected virtual void TimerCallback(object state)
         {
             var elapsed = GetElapsedTime();
+            var colors = new Dictionary<int, Color>();
 
+            _renderMutex.WaitOne();
             foreach (var item in _inProgressInterpolations.ToList())
             {
                 var progress = (elapsed - item.Value.Time).TotalMilliseconds / item.Value.Duration.TotalMilliseconds;
@@ -98,7 +101,7 @@ namespace QIndependentStudios.MusicalLights.Core
                 var r = (int)Lerp(item.Value.Color.R, item.Value.NextSpan.Color.R, progress);
                 var g = (int)Lerp(item.Value.Color.G, item.Value.NextSpan.Color.G, progress);
                 var b = (int)Lerp(item.Value.Color.B, item.Value.NextSpan.Color.B, progress);
-                _colors[item.Value.LightId] = Color.FromArgb(r, g, b);
+                colors[item.Value.LightId] = Color.FromArgb(r, g, b);
             }
 
             var frame = _frames.LastOrDefault(f => f.Time <= elapsed);
@@ -106,19 +109,20 @@ namespace QIndependentStudios.MusicalLights.Core
             {
                 _currentFrame = frame;
 
+                if (_lastFrame != null && _currentFrame == _lastFrame)
+                    OnSequenceCompleted();
+
                 foreach (var interpolationSpanKvp in _currentFrame.InterpolationSpans)
                 {
-                    _colors[interpolationSpanKvp.Key] = interpolationSpanKvp.Value.Color;
+                    colors[interpolationSpanKvp.Key] = interpolationSpanKvp.Value.Color;
 
                     if (interpolationSpanKvp.Value.CanInterpolate)
                         _inProgressInterpolations[interpolationSpanKvp.Key] = interpolationSpanKvp.Value;
                 }
             }
 
-            UpdateLightColor(_colors);
-
-            if (_lastFrame != null && _currentFrame == _lastFrame)
-                OnSequenceCompleted();
+            UpdateLightColor(colors);
+            _renderMutex.ReleaseMutex();
         }
 
         protected virtual TimeSpan GetElapsedTime()
