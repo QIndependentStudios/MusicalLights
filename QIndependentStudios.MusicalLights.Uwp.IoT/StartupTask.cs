@@ -1,48 +1,47 @@
 ﻿using QIndependentStudios.MusicalLights.Core;
-using QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback;
 using System;
 using System.Threading.Tasks;
+using Windows.ApplicationModel.Background;
 using Windows.Storage;
-using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Navigation;
 
-namespace QIndependentStudios.MusicalLights.Uwp.App
+namespace QIndependentStudios.MusicalLights.Uwp.IoT
 {
-    public sealed partial class MainPage : Page
+    public sealed class StartupTask : IBackgroundTask
     {
         private const long Interval = TimeSpan.TicksPerMillisecond * 50;
 
         private readonly IotSequencePlayer _player = new IotSequencePlayer();
+
         private string _sequenceDescription = "No sequence loaded";
+        private BackgroundTaskDeferral _deferral;
 
-        public MainPage()
+        public async void Run(IBackgroundTaskInstance taskInstance)
         {
-            InitializeComponent();
-        }
+            _deferral = taskInstance.GetDeferral();
+            taskInstance.Canceled += TaskInstance_Canceled;
 
-        protected override async void OnNavigatedTo(NavigationEventArgs e)
-        {
-            base.OnNavigatedTo(e);
+            await BluetoothLEServer.Current.StartAsync();
 
-            BluetoothLEServer.Current.CommandReceived -= Current_CommandReceived;
-            BluetoothLEServer.Current.CommandReceived += Current_CommandReceived;
-            _player.StateChanged -= Player_StateChanged;
+            BluetoothLEServer.Current.CommandReceived += BluetoothLEServer_CommandReceived;
             _player.StateChanged += Player_StateChanged;
-            _player.SequenceCompleted -= Player_SequenceCompleted;
             _player.SequenceCompleted += Player_SequenceCompleted;
+
             await PlayAsync(BluetoothConstants.DefaultSequenceName);
         }
 
-        protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
+        private async Task PlayAsync(string sequenceName)
         {
-            base.OnNavigatingFrom(e);
+            _player.Stop();
 
-            BluetoothLEServer.Current.CommandReceived -= Current_CommandReceived;
-            _player.StateChanged -= Player_StateChanged;
-            _player.SequenceCompleted -= Player_SequenceCompleted;
+            var sequenceFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri($"ms-appx:///SequenceData/{sequenceName}.json"));
+            var sequence = Sequence.FromJson(await FileIO.ReadTextAsync(sequenceFile));
+
+            await _player.LoadAsync(sequence);
+            _sequenceDescription = sequenceName;
+            _player.Play();
         }
 
-        private async void Current_CommandReceived(BluetoothLEServer sender, CommandReceivedEventArgs args)
+        private async void BluetoothLEServer_CommandReceived(BluetoothLEServer sender, CommandReceivedEventArgs args)
         {
             switch (args.CommandCode)
             {
@@ -74,16 +73,10 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
                 await PlayAsync(BluetoothConstants.DefaultSequenceName);
         }
 
-        private async Task PlayAsync(string sequenceName)
+        private void TaskInstance_Canceled(IBackgroundTaskInstance sender, BackgroundTaskCancellationReason reason)
         {
+            BluetoothLEServer.Current.Stop();
             _player.Stop();
-
-            var sequenceFile = await StorageFile.GetFileFromApplicationUriAsync(new Uri($"ms-appx:///SequenceData/{sequenceName}.json"));
-            var sequence = Sequence.FromJson(await FileIO.ReadTextAsync(sequenceFile));
-
-            await _player.LoadAsync(sequence);
-            _sequenceDescription = sequenceName;
-            _player.Play();
         }
     }
 }

@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 
-namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
+namespace QIndependentStudios.MusicalLights.Uwp.IoT
 {
-    public class IotSequencePlayer : SequencePlayer, IDisposable
+    internal sealed class IotSequencePlayer : SequencePlayer, IDisposable
     {
         private const double Brightness = 0.125;
 
@@ -19,7 +19,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
         private DotStar _dotStar;
         private bool _hasMedia;
 
-        public async Task LoadAsync(Sequence sequence)
+        internal async Task LoadAsync(Sequence sequence)
         {
             if (sequence == null)
                 throw new ArgumentNullException(nameof(sequence));
@@ -50,19 +50,19 @@ namespace QIndependentStudios.MusicalLights.Uwp.App.SequencePlayback
                 _dotStar.UpdateLength((uint)maxNumberOfLights);
         }
 
-        public override void Play()
+        public sealed override void Play()
         {
             base.Play();
             _player.Play();
         }
 
-        public override void Pause()
+        public sealed override void Pause()
         {
             base.Pause();
             _player.Pause();
         }
 
-        public override void Stop()
+        public sealed override void Stop()
         {
             base.Stop();
             _player.Pause();

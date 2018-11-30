@@ -6,11 +6,11 @@ using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Foundation;
 using Windows.Storage.Streams;
 
-namespace QIndependentStudios.MusicalLights.Uwp.App
+namespace QIndependentStudios.MusicalLights.Uwp.IoT
 {
-    public class BluetoothLEServer
+    public sealed class BluetoothLEServer
     {
-        public event TypedEventHandler<BluetoothLEServer, CommandReceivedEventArgs> CommandReceived;
+        internal event TypedEventHandler<BluetoothLEServer, CommandReceivedEventArgs> CommandReceived;
 
         private const int GattPresentationFormatExponent = 0;
         private const int GattPresentationFormatUnitless = 0x2700;
@@ -25,14 +25,14 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
             Current = new BluetoothLEServer();
         }
 
-        protected BluetoothLEServer()
+        private BluetoothLEServer()
         { }
 
-        public static BluetoothLEServer Current;
+        internal static BluetoothLEServer Current { get; private set; }
 
-        public DeviceStatus CurrentStatus { get; protected set; }
+        internal DeviceStatus CurrentStatus { get; private set; }
 
-        public async Task StartAsync()
+        internal async Task StartAsync()
         {
             if (_gattServiceProvider == null)
             {
@@ -53,12 +53,12 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
             _gattServiceProvider.StartAdvertising(advertisingParameters);
         }
 
-        public void Stop()
+        internal void Stop()
         {
             _gattServiceProvider.StopAdvertising();
         }
 
-        public async Task UpdateStatusAsync(SequencePlayerState state, string sequenceDescription)
+        internal async Task UpdateStatusAsync(SequencePlayerState state, string sequenceDescription)
         {
             CurrentStatus = new DeviceStatus(state, sequenceDescription);
 
@@ -66,7 +66,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
                 await _statusCharacteristic.NotifyValueAsync(GetStatusBuffer());
         }
 
-        protected void OnCommandReceived(CommandCode commandCode, int? sequenceId = null)
+        private void OnCommandReceived(CommandCode commandCode, int? sequenceId = null)
         {
             CommandReceived?.Invoke(this, new CommandReceivedEventArgs(commandCode, sequenceId));
         }
@@ -175,7 +175,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
         }
     }
 
-    public class DeviceStatus
+    internal class DeviceStatus
     {
         public DeviceStatus(SequencePlayerState playerState, string sequenceDescription)
         {
@@ -187,7 +187,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.App
         public string SequenceDescription { get; }
     }
 
-    public class CommandReceivedEventArgs : EventArgs
+    internal class CommandReceivedEventArgs : EventArgs
     {
         public CommandReceivedEventArgs(CommandCode commandCode, int? sequenceId)
         {
