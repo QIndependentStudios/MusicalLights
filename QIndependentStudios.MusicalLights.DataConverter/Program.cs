@@ -14,6 +14,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
 
         private static readonly Random Rand = new Random();
         private static readonly TimeSpan GeneratedSeqeunceDuration = TimeSpan.FromMinutes(5);
+        private static readonly Color WarmWhite = Color.FromArgb(255, 147, 41);
 
         private static readonly List<Color> _colors = new List<Color>
         {
@@ -94,8 +95,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
                     break;
             }
 
-            sequenceData.Add((new TimeSpan(), lightCount + 1),
-                new LightData(InterpolationMode.None, Color.FromArgb(255, 147, 41)));
+            sequenceData.Add((TimeSpan.Zero, lightCount + 1), new LightData(InterpolationMode.None, WarmWhite));
             var sequence = ConvertToModel(null, sequenceData);
 
             Console.WriteLine("Writing sequence json data...");
@@ -107,50 +107,71 @@ namespace QIndependentStudios.MusicalLights.DataConverter
         private static Dictionary<(TimeSpan, int), LightData> GenerateTwinkle(int lightCount)
         {
             Console.WriteLine("Generating twinkle sequence...");
-            const double minSeparation = 5;
-            const double maxSeparation = 30;
-            const double minStartDelay = 0;
-            const double maxStartDelay = maxSeparation - minSeparation;
-            var transitionDuration = TimeSpan.FromSeconds(1);
 
-            var sequenceData = new Dictionary<(TimeSpan, int), LightData>
-            {
-                { (new TimeSpan(), 60), new LightData(InterpolationMode.None, Color.FromArgb(0, 0, 0)) }
-            };
+            const double minSeparation = 0.33;
+            const double maxSeparation = 1.5;
+            var fadeInDuration = TimeSpan.FromSeconds(1);
+            var fadeOutDuration = TimeSpan.FromSeconds(2);
+            var sequenceData = new Dictionary<(TimeSpan Time, int LightId), LightData>();
+            var recentLights = new List<int>();
+            var recentColors = new List<int>();
 
             for (var i = 0; i < lightCount; i++)
             {
-                var initialDelay = TimeSpan.FromSeconds(GetRandomDouble(minStartDelay, maxStartDelay));
-                var time = new TimeSpan();
-
-                sequenceData.Add((new TimeSpan(), i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
-
-                if (initialDelay.Ticks >= 0)
-                {
-                    time = time.Add(initialDelay);
-                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
-                }
-
-                time = time.Add(transitionDuration);
-                sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, _colors[Rand.Next(_colors.Count)]));
-                time = time.Add(transitionDuration);
-                sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
+                sequenceData.Add((TimeSpan.Zero, i + 1), new LightData(InterpolationMode.None, Color.FromArgb(0, 0, 0)));
             }
 
-            for (var i = 0; i < lightCount; i++)
+            var nextTwinkleTime = TimeSpan.Zero;
+            while (nextTwinkleTime < GeneratedSeqeunceDuration)
             {
-                var frames = sequenceData.Where(x => x.Key.Item2 == i + 1).ToList();
-                var time = frames.Any() ? frames.Last().Key.Item1 : new TimeSpan();
+                var twinkleCandidates = sequenceData
+                    .GroupBy(x => x.Key.LightId)
+                    .Select(x => (LightId: x.Key, EndTime: x.Max(y => y.Key.Time)))
+                    .Where(x => x.EndTime < nextTwinkleTime)
+                    .ToList();
 
-                while (time < GeneratedSeqeunceDuration)
+                if (nextTwinkleTime != TimeSpan.Zero && !twinkleCandidates.Any())
                 {
-                    time = time.Add(TimeSpan.FromSeconds(GetRandomDouble(maxSeparation, minSeparation)));
-                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
-                    time = time.Add(transitionDuration);
-                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, _colors[Rand.Next(_colors.Count)]));
-                    time = time.Add(transitionDuration);
-                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
+                    nextTwinkleTime += TimeSpan.FromSeconds(GetRandomDouble(minSeparation, maxSeparation));
+                    continue;
                 }
+
+                var lightId = -1;
+                while (lightId < 0 || recentLights.Any(x => x >= lightId - 2 && x <= lightId + 2))
+                    lightId = !twinkleCandidates.Any()
+                        ? Rand.Next(lightCount)
+                        : twinkleCandidates[Rand.Next(twinkleCandidates.Count)].LightId;
+
+                if (nextTwinkleTime == TimeSpan.Zero)
+                    sequenceData.Remove((Time: TimeSpan.Zero, LightId: lightId));
+
+                var colorIndex = -1;
+                while (colorIndex < 0 || recentColors.Contains(colorIndex))
+                    colorIndex = Rand.Next(_colors.Count);
+
+                sequenceData.Add((nextTwinkleTime, lightId),
+                    new LightData(InterpolationMode.Linear, Color.FromArgb(0, 0, 0)));
+                sequenceData.Add((nextTwinkleTime + fadeInDuration, lightId),
+                    new LightData(InterpolationMode.Linear, _colors[colorIndex]));
+                sequenceData.Add((nextTwinkleTime + fadeInDuration + fadeOutDuration, lightId),
+                    new LightData(InterpolationMode.None, Color.FromArgb(0, 0, 0)));
+
+                if (recentLights.Contains(lightId))
+                    recentLights.Remove(lightId);
+                else if (recentLights.Count >= 5)
+                    recentLights.RemoveAt(0);
+
+                recentLights.Add(lightId);
+
+
+                if (recentColors.Contains(colorIndex))
+                    recentColors.Remove(colorIndex);
+                else if (recentColors.Count >= 3)
+                    recentColors.RemoveAt(0);
+
+                recentColors.Add(colorIndex);
+
+                nextTwinkleTime += TimeSpan.FromSeconds(GetRandomDouble(minSeparation, maxSeparation));
             }
 
             return sequenceData;
@@ -159,19 +180,23 @@ namespace QIndependentStudios.MusicalLights.DataConverter
         private static Dictionary<(TimeSpan, int), LightData> GenerateRainbow(int lightCount)
         {
             Console.WriteLine("Generating rainbow sequence...");
-            var transitionDuration = TimeSpan.FromSeconds(0.5);
-            var sequenceData = new Dictionary<(TimeSpan, int), LightData>
-            {
-                { (new TimeSpan(), 60), new LightData(InterpolationMode.None, Color.FromArgb(0, 0, 0)) }
-            };
 
-            var time = new TimeSpan();
+            const double brightnessModifier = 0.25;
+            var transitionDuration = TimeSpan.FromSeconds(0.5);
+            var sequenceData = new Dictionary<(TimeSpan Time, int LightId), LightData>();
+
+            var time = TimeSpan.Zero;
             var offset = 0;
             while ((offset / lightCount) != 10)
             {
                 for (var i = 0; i < lightCount; i++)
                 {
-                    sequenceData.Add((time, i + 1), new LightData(InterpolationMode.Linear, _colors[(i + offset) % _colors.Count]));
+                    var color = _colors[(i + offset) % _colors.Count];
+                    color = Color.FromArgb(color.A,
+                        (int)(color.R * brightnessModifier),
+                        (int)(color.G * brightnessModifier),
+                        (int)(color.B * brightnessModifier));
+                    sequenceData.Add((Time: time, LightId: i + 1), new LightData(InterpolationMode.Linear, color));
                 }
 
                 time = time.Add(transitionDuration);
@@ -198,7 +223,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
                 {
                     var color = Color.FromArgb(r, g, b);
                     if (color.ToArgb() == Color.White.ToArgb())
-                        color = Color.FromArgb(255, 160, 72);
+                        color = WarmWhite;
 
                     sequenceData[(frame, lightId)] = new LightData((InterpolationMode)interpolationMode, color);
                 }

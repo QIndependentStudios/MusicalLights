@@ -12,7 +12,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
 {
     internal sealed class IotSequencePlayer : SequencePlayer, IDisposable
     {
-        private const double Brightness = 0.125;
+        private const double Brightness = 0.25;
 
         private readonly MediaPlayer _player = new MediaPlayer();
 
