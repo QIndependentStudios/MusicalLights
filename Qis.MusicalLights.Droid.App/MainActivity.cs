@@ -28,6 +28,9 @@ namespace Qis.MusicalLights.Droid.App
         private Button _retryConnectButton;
         private Button _rainbowButton;
         private Button _wiwButton;
+        private Button _lowBrightnessButton;
+        private Button _mediumBrightnessButton;
+        private Button _highBrightnessButton;
         private FloatingActionButton _playButton;
         private FloatingActionButton _pauseButton;
         private FrameLayout _playPauseLayout;
@@ -55,6 +58,15 @@ namespace Qis.MusicalLights.Droid.App
 
             _wiwButton = FindViewById<Button>(Resource.Id.wiwButton);
             _wiwButton.Click += WiwButton_Click;
+
+            _lowBrightnessButton = FindViewById<Button>(Resource.Id.lowBrightnessButton);
+            _lowBrightnessButton.Click += LowBrightnessButton_Click;
+
+            _mediumBrightnessButton = FindViewById<Button>(Resource.Id.mediumBrightnessButton);
+            _mediumBrightnessButton.Click += MediumBrightnessButton_Click;
+
+            _highBrightnessButton = FindViewById<Button>(Resource.Id.highBrightnessButton);
+            _highBrightnessButton.Click += HighBrightnessButton_Click;
 
             _retryConnectButton = FindViewById<Button>(Resource.Id.retryConnectButton);
             _retryConnectButton.Click += RetryConnectButton_Click;
@@ -217,6 +229,7 @@ namespace Qis.MusicalLights.Droid.App
                 return;
             }
 
+            _bluetoothLEService.ConnectionStateChanged -= BluetoothLEService_ConnectionStateChanged;
             _bluetoothLEService.ConnectionStateChanged += BluetoothLEService_ConnectionStateChanged;
 
             var readResult = await _bluetoothLEService.ReadCharacteristicAsync(BluetoothConstants.ServiceUuid,
@@ -227,6 +240,7 @@ namespace Qis.MusicalLights.Droid.App
             if (readResult.GattStatus != GattStatus.Success)
                 ShowAlert("Get Status Failed", $"Failed to get current status.");
 
+            _bluetoothLEService.CharacteristicNotificationReceived -= BluetoothLEService_CharacteristicNotificationReceived;
             _bluetoothLEService.CharacteristicNotificationReceived += BluetoothLEService_CharacteristicNotificationReceived;
             var subscribeResult = _bluetoothLEService.SubscribeCharacteristicNotification(BluetoothConstants.ServiceUuid,
                 BluetoothConstants.StatusCharacteristicUuid);
@@ -297,7 +311,10 @@ namespace Qis.MusicalLights.Droid.App
                 _defaultButton.Enabled = isEnabled;
                 _rainbowButton.Enabled = isEnabled;
                 _wiwButton.Enabled = isEnabled;
-                _playPauseLayout.Visibility = isEnabled ? ViewStates.Visible : ViewStates.Gone;
+                _lowBrightnessButton.Enabled = isEnabled;
+                _mediumBrightnessButton.Enabled = isEnabled;
+                _highBrightnessButton.Enabled = isEnabled;
+                _playPauseLayout.Visibility = isEnabled ? ViewStates.Visible : ViewStates.Invisible;
                 _statusTextView.Visibility = isEnabled ? ViewStates.Visible : ViewStates.Gone;
                 _retryConnectButton.Enabled = isEnabled;
             });
@@ -316,6 +333,21 @@ namespace Qis.MusicalLights.Droid.App
         private async void WiwButton_Click(object sender, EventArgs e)
         {
             await SendCommandAsync(CommandCode.Play, 2);
+        }
+
+        private async void LowBrightnessButton_Click(object sender, EventArgs e)
+        {
+            await ChangeBrightnessAsync(BluetoothConstants.LowBrightness);
+        }
+
+        private async void MediumBrightnessButton_Click(object sender, EventArgs e)
+        {
+            await ChangeBrightnessAsync(BluetoothConstants.MediumBrightness);
+        }
+
+        private async void HighBrightnessButton_Click(object sender, EventArgs e)
+        {
+            await ChangeBrightnessAsync(BluetoothConstants.HighBrightness);
         }
 
         private async void PlayButton_Click(object sender, EventArgs e)
@@ -351,6 +383,7 @@ namespace Qis.MusicalLights.Droid.App
             var result = await _bluetoothLEService.WriteCharacteristicAsync(BluetoothConstants.ServiceUuid,
                 BluetoothConstants.CommandCharacteristicUuid,
                 bytes.ToArray());
+
             RunOnUiThread(() =>
             {
                 _progressBar.Visibility = ViewStates.Gone;
@@ -359,6 +392,28 @@ namespace Qis.MusicalLights.Droid.App
 
             if (result.GattStatus != GattStatus.Success)
                 ShowAlert("Command Failed", $"Failed to send {commandCode} command.");
+        }
+
+        private async Task ChangeBrightnessAsync(double brightness)
+        {
+            RunOnUiThread(() =>
+            {
+                _progressBar.Visibility = ViewStates.Visible;
+            });
+            SetControlsEnabled(false);
+
+            var result = await _bluetoothLEService.WriteCharacteristicAsync(BluetoothConstants.ServiceUuid,
+                BluetoothConstants.BrightnessCharacteristicUuid,
+                BitConverter.GetBytes(brightness));
+
+            RunOnUiThread(() =>
+            {
+                _progressBar.Visibility = ViewStates.Gone;
+            });
+            SetControlsEnabled(true);
+
+            if (result.GattStatus != GattStatus.Success)
+                ShowAlert("Command Failed", $"Failed to change brightness to {brightness * 100:P2}.");
         }
 
         private void ShowAlert(string title, string message)

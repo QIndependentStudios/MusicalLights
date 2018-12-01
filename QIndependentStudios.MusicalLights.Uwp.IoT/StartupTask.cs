@@ -23,6 +23,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
             await BluetoothLEServer.Current.StartAsync();
 
             BluetoothLEServer.Current.CommandReceived += BluetoothLEServer_CommandReceived;
+            BluetoothLEServer.Current.BrightnessChangeReceived += BluetoothLEServer_BrightnessChangeReceived;
             _player.StateChanged += Player_StateChanged;
             _player.SequenceCompleted += Player_SequenceCompleted;
 
@@ -60,6 +61,11 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
                 default:
                     break;
             }
+        }
+
+        private void BluetoothLEServer_BrightnessChangeReceived(BluetoothLEServer sender, BrightnessChangeReceivedEventArgs args)
+        {
+            _player.Brightness = args.Brightness;
         }
 
         private async void Player_StateChanged(object sender, EventArgs e)

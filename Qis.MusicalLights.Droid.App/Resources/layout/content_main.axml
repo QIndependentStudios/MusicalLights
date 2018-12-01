@@ -8,13 +8,20 @@
 	android:layout_height="match_parent"
 	app:layout_behavior="@string/appbar_scrolling_view_behavior"
 	tools:showIn="@layout/activity_main">
+	<Button
+		android:text="Retry Bluetooth connect"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:id="@+id/retryConnectButton"
+		android:layout_centerHorizontal="true" />
 	<TextView
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
 		android:text="Select a sequence to play"
 		android:layout_centerHorizontal="true"
 		android:layout_margin="10dp"
-		android:id="@+id/welcomeTextView" />
+		android:id="@+id/welcomeTextView"
+		android:layout_below="@+id/retryConnectButton" />
 	<Button
 		android:text="Twinkle"
 		android:layout_width="wrap_content"
@@ -36,13 +43,35 @@
 		android:id="@+id/wiwButton"
 		android:layout_below="@+id/rainbowButton"
 		android:layout_centerHorizontal="true" />
-	<Button
-		android:text="Retry Bluetooth connect"
+	<TextView
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
-		android:id="@+id/retryConnectButton"
-		android:layout_alignParentBottom="true"
+		android:text="Brightness"
+		android:layout_centerHorizontal="true"
+		android:layout_above="@+id/mediumBrightnessButton"
+		android:layout_margin="10dp"
+		android:id="@+id/brightnessTextView" />
+	<Button
+		android:text="Low"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:id="@+id/lowBrightnessButton"
+		android:layout_above="@+id/playPauseButtonLayout"
+		android:layout_toLeftOf="@+id/mediumBrightnessButton" />
+	<Button
+		android:text="Medium"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:id="@+id/mediumBrightnessButton"
+		android:layout_above="@+id/playPauseButtonLayout"
 		android:layout_centerHorizontal="true" />
+	<Button
+		android:text="High"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:id="@+id/highBrightnessButton"
+		android:layout_above="@+id/playPauseButtonLayout"
+		android:layout_toRightOf="@+id/mediumBrightnessButton" />
 	<FrameLayout
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"

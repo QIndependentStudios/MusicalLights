@@ -11,6 +11,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
     public sealed class BluetoothLEServer
     {
         internal event TypedEventHandler<BluetoothLEServer, CommandReceivedEventArgs> CommandReceived;
+        internal event TypedEventHandler<BluetoothLEServer, BrightnessChangeReceivedEventArgs> BrightnessChangeReceived;
 
         private const int GattPresentationFormatExponent = 0;
         private const int GattPresentationFormatUnitless = 0x2700;
@@ -19,6 +20,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
 
         private GattServiceProvider _gattServiceProvider;
         private GattLocalCharacteristic _statusCharacteristic;
+        private readonly GattLocalCharacteristic _brightnessCharacteristic;
 
         static BluetoothLEServer()
         {
@@ -71,6 +73,11 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
             CommandReceived?.Invoke(this, new CommandReceivedEventArgs(commandCode, sequenceId));
         }
 
+        private void OnBrightnessChangeReceived(double brightness)
+        {
+            BrightnessChangeReceived?.Invoke(this, new BrightnessChangeReceivedEventArgs(brightness));
+        }
+
         private async Task CreateCharacteristics(GattServiceProvider gattServiceProvider)
         {
             var statusCharacteristicParams = new GattLocalCharacteristicParameters
@@ -105,21 +112,21 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
             if (commandCharacteristicResult.Error != BluetoothError.Success)
                 throw new InvalidOperationException($"Failed to create GATT command characteristic with error {commandCharacteristicResult.Error}");
 
+            var brightnessCharacteristicResult = await gattServiceProvider.Service.CreateCharacteristicAsync(
+                BluetoothConstants.BrightnessCharacteristicUuid,
+                new GattLocalCharacteristicParameters
+                {
+                    CharacteristicProperties = GattCharacteristicProperties.Write
+                        | GattCharacteristicProperties.WriteWithoutResponse,
+                    WriteProtectionLevel = GattProtectionLevel.Plain,
+                    UserDescription = "Brightness Characteristic"
+                });
+            if (brightnessCharacteristicResult.Error != BluetoothError.Success)
+                throw new InvalidOperationException($"Failed to create GATT brightness characteristic with error {brightnessCharacteristicResult.Error}");
+
             _statusCharacteristic.ReadRequested += StatusCharacteristic_ReadRequested;
             commandCharacteristicResult.Characteristic.WriteRequested += CommandCharacteristic_WriteRequested;
-        }
-
-        private async void StatusCharacteristic_ReadRequested(GattLocalCharacteristic sender, GattReadRequestedEventArgs args)
-        {
-            var deferral = args.GetDeferral();
-
-            var request = await args.GetRequestAsync();
-            if (request == null)
-                return;
-
-            request.RespondWithValue(GetStatusBuffer());
-
-            deferral.Complete();
+            brightnessCharacteristicResult.Characteristic.WriteRequested += BrightnessCharacteristic_WriteRequested;
         }
 
         private IBuffer GetStatusBuffer()
@@ -134,6 +141,19 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
             writer.WriteString(statusValue);
 
             return writer.DetachBuffer();
+        }
+
+        private async void StatusCharacteristic_ReadRequested(GattLocalCharacteristic sender, GattReadRequestedEventArgs args)
+        {
+            var deferral = args.GetDeferral();
+
+            var request = await args.GetRequestAsync();
+            if (request == null)
+                return;
+
+            request.RespondWithValue(GetStatusBuffer());
+
+            deferral.Complete();
         }
 
         private async void CommandCharacteristic_WriteRequested(GattLocalCharacteristic sender,
@@ -173,6 +193,41 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
 
             deferral.Complete();
         }
+
+        private async void BrightnessCharacteristic_WriteRequested(GattLocalCharacteristic sender,
+            GattWriteRequestedEventArgs args)
+        {
+            var deferral = args.GetDeferral();
+
+            var request = await args.GetRequestAsync();
+            if (request == null)
+                return;
+
+            if (request.Value.Length != 8)
+            {
+                if (request.Option == GattWriteOption.WriteWithResponse)
+                    request.RespondWithProtocolError(GattProtocolError.InvalidAttributeValueLength);
+                return;
+            }
+
+            var reader = DataReader.FromBuffer(request.Value);
+            reader.ByteOrder = ByteOrder.LittleEndian;
+
+            var brightness = reader.ReadDouble();
+            if (brightness < 0 || brightness > 1)
+            {
+                if (request.Option == GattWriteOption.WriteWithResponse)
+                    request.RespondWithProtocolError(GattProtocolError.InvalidPdu);
+                return;
+            }
+
+            OnBrightnessChangeReceived(brightness);
+
+            if (request.Option == GattWriteOption.WriteWithResponse)
+                request.Respond();
+
+            deferral.Complete();
+        }
     }
 
     internal class DeviceStatus
@@ -197,5 +252,15 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
 
         public CommandCode CommandCode { get; }
         public int? SequenceId { get; }
+    }
+
+    internal class BrightnessChangeReceivedEventArgs : EventArgs
+    {
+        public BrightnessChangeReceivedEventArgs(double brightness)
+        {
+            Brightness = brightness;
+        }
+
+        public double Brightness { get; }
     }
 }

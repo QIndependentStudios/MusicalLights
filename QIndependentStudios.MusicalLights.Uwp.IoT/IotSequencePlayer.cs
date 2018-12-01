@@ -12,12 +12,32 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
 {
     internal sealed class IotSequencePlayer : SequencePlayer, IDisposable
     {
-        private const double Brightness = 0.25;
-
         private readonly MediaPlayer _player = new MediaPlayer();
 
         private DotStar _dotStar;
         private bool _hasMedia;
+        private double _brightness = BluetoothConstants.MediumBrightness;
+
+        public double Brightness
+        {
+            get => _brightness;
+            set
+            {
+                if (_brightness == value)
+                    return;
+
+                _renderMutex.WaitOne();
+                _brightness = value;
+
+                if (_dotStar != null)
+                {
+                    _dotStar.Brightness = GetDotStarBrightnessValue(_brightness);
+                    _dotStar.Show();
+                }
+
+                _renderMutex.ReleaseMutex();
+            }
+        }
 
         internal async Task LoadAsync(Sequence sequence)
         {
@@ -42,7 +62,7 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
             {
                 _dotStar = new DotStar((uint)maxNumberOfLights, DotStar.DOTSTAR_BGR)
                 {
-                    Brightness = (int)(Brightness * 256) - 1
+                    Brightness = GetDotStarBrightnessValue(Brightness)
                 };
                 await _dotStar.BeginAsync();
             }
@@ -95,6 +115,11 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
             }
 
             _dotStar?.Show();
+        }
+
+        private byte GetDotStarBrightnessValue(double brightness)
+        {
+            return (byte)(brightness * 256 - 1);
         }
     }
 }
