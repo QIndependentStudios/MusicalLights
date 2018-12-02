@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace QIndependentStudios.MusicalLights.DataConverter
 {
@@ -45,6 +46,10 @@ namespace QIndependentStudios.MusicalLights.DataConverter
                     Console.WriteLine("What type? Enter \"twinkle\" or \"rainbow\"");
                     var type = Console.ReadLine().Trim();
                     Generate(type, 27);
+                    break;
+                case "ae":
+                    var data = AeRandom(256);
+                    Console.WriteLine(data);
                     break;
                 default:
                     break;
@@ -206,6 +211,29 @@ namespace QIndependentStudios.MusicalLights.DataConverter
             return sequenceData;
         }
 
+        private static string AeRandom(int frames)
+        {
+            const int frameHoldDuration = 4;
+            var recentColors = new List<int>();
+            var sb = new StringBuilder();
+
+            for (var i = 0; i < frames / 4; i++)
+            {
+                var colorIndex = -1;
+                while (colorIndex < 0 || recentColors.Contains(colorIndex))
+                    colorIndex = Rand.Next(_colors.Count);
+                var color = _colors[colorIndex];
+                sb.AppendLine($"\t{i * frameHoldDuration}\t{color.A}\t{color.R}\t{color.G}\t{color.B}\t");
+
+                if (recentColors.Contains(colorIndex))
+                    recentColors.Remove(colorIndex);
+                else if (recentColors.Count >= 3)
+                    recentColors.RemoveAt(0);
+            }
+
+            return sb.ToString();
+        }
+
         private static IDictionary<(double, int), LightData> ParseData(string text)
         {
             var sequenceData = new Dictionary<(double, int), LightData>();
@@ -225,7 +253,7 @@ namespace QIndependentStudios.MusicalLights.DataConverter
                     if (color.ToArgb() == Color.White.ToArgb())
                         color = WarmWhite;
 
-                    sequenceData[(frame, lightId)] = new LightData((InterpolationMode)interpolationMode, color);
+                    sequenceData[((int)frame, lightId)] = new LightData((InterpolationMode)interpolationMode, color);
                 }
             }
 
