@@ -22,6 +22,7 @@ namespace QIndependentStudios.MusicalLights.Core
         protected InterpolationFrame _currentFrame;
         protected InterpolationFrame _lastFrame;
         protected Dictionary<int, InterpolationSpan> _inProgressInterpolations;
+        protected TimeSpan _lastProcessed = TimeSpan.Zero;
 
         private SequencePlayerState _state = SequencePlayerState.Stopped;
 
@@ -75,6 +76,7 @@ namespace QIndependentStudios.MusicalLights.Core
             _frames = InterpolationData.Create(sequence)?.OrderBy(f => f.Time).ToList() ?? new List<InterpolationFrame>();
             _lastFrame = _frames.LastOrDefault();
             _inProgressInterpolations = new Dictionary<int, InterpolationSpan>();
+            _lastProcessed = TimeSpan.Zero;
         }
 
         protected void StopTimer()
@@ -85,10 +87,31 @@ namespace QIndependentStudios.MusicalLights.Core
 
         protected virtual void TimerCallback(object state)
         {
+            var startTime = DateTime.Now;
+            _renderMutex.WaitOne();
             var elapsed = GetElapsedTime();
             var colors = new Dictionary<int, Color>();
 
-            _renderMutex.WaitOne();
+            var frames = _frames.Where(f => f.Time > _lastProcessed && f.Time <= elapsed);
+            foreach (var frame in frames)
+            {
+                if (frame != null && _currentFrame != frame)
+                {
+                    _currentFrame = frame;
+
+                    if (_lastFrame != null && _currentFrame == _lastFrame)
+                        OnSequenceCompleted();
+
+                    foreach (var interpolationSpanKvp in _currentFrame.InterpolationSpans)
+                    {
+                        colors[interpolationSpanKvp.Key] = interpolationSpanKvp.Value.Color;
+
+                        if (interpolationSpanKvp.Value.CanInterpolate)
+                            _inProgressInterpolations[interpolationSpanKvp.Key] = interpolationSpanKvp.Value;
+                    }
+                }
+            }
+
             foreach (var item in _inProgressInterpolations.ToList())
             {
                 var progress = (elapsed - item.Value.Time).TotalMilliseconds / item.Value.Duration.TotalMilliseconds;
@@ -104,25 +127,10 @@ namespace QIndependentStudios.MusicalLights.Core
                 colors[item.Value.LightId] = Color.FromArgb(r, g, b);
             }
 
-            var frame = _frames.LastOrDefault(f => f.Time <= elapsed);
-            if (frame != null && _currentFrame != frame)
-            {
-                _currentFrame = frame;
-
-                if (_lastFrame != null && _currentFrame == _lastFrame)
-                    OnSequenceCompleted();
-
-                foreach (var interpolationSpanKvp in _currentFrame.InterpolationSpans)
-                {
-                    colors[interpolationSpanKvp.Key] = interpolationSpanKvp.Value.Color;
-
-                    if (interpolationSpanKvp.Value.CanInterpolate)
-                        _inProgressInterpolations[interpolationSpanKvp.Key] = interpolationSpanKvp.Value;
-                }
-            }
-
             UpdateLightColor(colors);
+            _lastProcessed = elapsed;
             _renderMutex.ReleaseMutex();
+            System.Diagnostics.Debug.WriteLine($"Rendered frame in {(DateTime.Now - startTime).TotalMilliseconds}");
         }
 
         protected virtual TimeSpan GetElapsedTime()

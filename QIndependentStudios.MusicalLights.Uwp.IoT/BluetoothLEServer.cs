@@ -20,7 +20,6 @@ namespace QIndependentStudios.MusicalLights.Uwp.IoT
 
         private GattServiceProvider _gattServiceProvider;
         private GattLocalCharacteristic _statusCharacteristic;
-        private readonly GattLocalCharacteristic _brightnessCharacteristic;
 
         static BluetoothLEServer()
         {
