@@ -22,7 +22,7 @@ namespace QIndependentStudios.MusicalLights.Core
         protected InterpolationFrame _currentFrame;
         protected InterpolationFrame _lastFrame;
         protected Dictionary<int, InterpolationSpan> _inProgressInterpolations;
-        protected TimeSpan _lastProcessed = TimeSpan.Zero;
+        protected TimeSpan? _lastProcessed;
 
         private SequencePlayerState _state = SequencePlayerState.Stopped;
 
@@ -76,7 +76,7 @@ namespace QIndependentStudios.MusicalLights.Core
             _frames = InterpolationData.Create(sequence)?.OrderBy(f => f.Time).ToList() ?? new List<InterpolationFrame>();
             _lastFrame = _frames.LastOrDefault();
             _inProgressInterpolations = new Dictionary<int, InterpolationSpan>();
-            _lastProcessed = TimeSpan.Zero;
+            _lastProcessed = null;
         }
 
         protected void StopTimer()
@@ -87,12 +87,11 @@ namespace QIndependentStudios.MusicalLights.Core
 
         protected virtual void TimerCallback(object state)
         {
-            var startTime = DateTime.Now;
             _renderMutex.WaitOne();
             var elapsed = GetElapsedTime();
             var colors = new Dictionary<int, Color>();
 
-            var frames = _frames.Where(f => f.Time > _lastProcessed && f.Time <= elapsed);
+            var frames = _frames.Where(f => (_lastProcessed == null || f.Time > _lastProcessed) && f.Time <= elapsed);
             foreach (var frame in frames)
             {
                 if (frame != null && _currentFrame != frame)
@@ -130,7 +129,6 @@ namespace QIndependentStudios.MusicalLights.Core
             UpdateLightColor(colors);
             _lastProcessed = elapsed;
             _renderMutex.ReleaseMutex();
-            System.Diagnostics.Debug.WriteLine($"Rendered frame in {(DateTime.Now - startTime).TotalMilliseconds}");
         }
 
         protected virtual TimeSpan GetElapsedTime()
